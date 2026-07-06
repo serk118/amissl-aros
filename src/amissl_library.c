@@ -442,36 +442,13 @@ LIBPROTO(__UserLibCleanup, void, REG(a6, UNUSED __BASE_OR_IFACE), REG(a0, struct
 {
   TRACELINE();
 
-  // Skip OPENSSL_cleanup() — it resets RUN_ONCE guards but doesn't
-  // properly reinitialize them on next use, causing SSL_CTX_new to
-  // fail on subsequent runs. Global provider state persists across
-  // library opens which is acceptable on AmigaOS/AROS.
+  // Skip OPENSSL_cleanup() + __free_libcmt() — they destroy global
+  // state (provider, memory pool) shared across all library users.
+  // Without proper reinit on next use, SSL_CTX_new fails or crashes.
+  // Global state persists, which is fine on AmigaOS/AROS.
   // OPENSSL_cleanup();
   // CRYPTO_THREAD_cleanup();
-
-  if(libBase->parent->thread_hash)
-  {
-    D(DBF_STARTUP, "Performing unfreed states cleanup for %08lx (group %lu)", FindTask(NULL), libBase->ThreadGroupID);
-    LOCK_OBTAIN(libBase->parent->openssl_cs);
-    D(DBF_STARTUP, "h_doall(thread_hash)");
-    h_doall(libBase->parent->thread_hash, (void (*)(long, void *))ThreadGroupStateCleanup);
-    LOCK_RELEASE(libBase->parent->openssl_cs);
-  }
-  else
-    W(DBF_STARTUP, "No thread_hash");
-
-#if defined(__amigaos4__)
-  if(IUtility != NULL)
-  {
-    DropInterface((struct Interface *)IUtility);
-    IUtility = NULL;
-  }
-  if(IIntuition != NULL)
-  {
-    DropInterface((struct Interface *)IIntuition);
-    IIntuition = NULL;
-  }
-#endif
+  // __free_libcmt();
 
   if(UtilityBase != NULL)
   {
@@ -483,9 +460,6 @@ LIBPROTO(__UserLibCleanup, void, REG(a6, UNUSED __BASE_OR_IFACE), REG(a0, struct
     CloseLibrary((struct Library *)IntuitionBase);
     IntuitionBase = NULL;
   }
-
-  // make sure to free all resources of libcmt
-  __free_libcmt();
 }
 
 LIBPROTO(__UserLibExpunge, void, REG(a6, UNUSED __BASE_OR_IFACE))
