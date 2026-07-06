@@ -81,6 +81,8 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_base)
         goto err;
     }
 
+    OSSL_PROVIDER_load(NULL, "default");
+
     base_inited = 1;
     return 1;
 
