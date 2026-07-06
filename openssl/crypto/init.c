@@ -82,28 +82,6 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_base)
     }
 
     base_inited = 1;
-
-    OPENSSL_cpuid_setup();
-
-    if (!ossl_init_thread())
-        goto err;
-
-    if (!CRYPTO_THREAD_init_local(&in_init_config_local, NULL))
-        goto err;
-
-    OSSL_PROVIDER_load(NULL, "default");
-
-    base_inited = 1;
-
-    OPENSSL_cpuid_setup();
-
-    if (!ossl_init_thread())
-        goto err;
-
-    if (!CRYPTO_THREAD_init_local(&in_init_config_local, NULL))
-        goto err;
-
-    base_inited = 1;
     return 1;
 
 err:

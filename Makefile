@@ -389,7 +389,7 @@ ifeq ($(OS), aros-x86_64)
   CFLAGS += -Wno-pointer-sign -DNO_INLINE_STDARG -D__BSD_VISIBLE=1 -DMULTIBASE
   CFLAGS += -DDATE="\"$(shell date +%d.%m.%Y)\""
   CFLAGS += -DOPENSSL_RAND_SEED_NONE -DAI_PASSIVE=0
-  CFLAGS += -mstackrealign -mcmodel=large
+  CFLAGS += -mstackrealign
   LDLIBS += -ldebug -lamiga -lm -lstdc.static -lgcc -lamisslapps -lamisslstubs -lamisslauto -lamissldebug
   LDFLAGS += -Wl,-z,notext -Wl,--allow-multiple-definition
 
@@ -527,7 +527,7 @@ $(BUILD_D)/openssl/Makefile: $(BUILD_D)/openssl
 	@sh tools/cpheaders.sh $(BUILD_D)
 
 $(LIBCRYPTO): $(BUILD_D)/openssl/Makefile
-	@$(MAKE) -C $(BUILD_D)/openssl -f Makefile CC="$(CC) $(SYSROOT) -mstackrealign -mcmodel=large" OPENSSLDIR=AmiSSL: ENGINESDIR=AmiSSL:engines MODULESDIR=AmiSSL:modules RANLIB=$(RANLIB) libcrypto.a libssl.a
+	@$(MAKE) -C $(BUILD_D)/openssl -f Makefile CC="$(CC) $(SYSROOT) -mstackrealign" OPENSSLDIR=AmiSSL: ENGINESDIR=AmiSSL:engines MODULESDIR=AmiSSL:modules RANLIB=$(RANLIB) libcrypto.a libssl.a
 	@echo "  [PATCH] Replacing context.o and threads_amissl.o in libcrypto.a"
 	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c openssl/crypto/context.c -o $(BUILD_D)/openssl/context.o 2>/dev/null || true
 	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c openssl/crypto/threads_amissl.c -o $(BUILD_D)/openssl/threads_amissl.o 2>/dev/null || true

@@ -369,6 +369,8 @@ LIBPROTO(InitAmiSSLA, LONG, REG(a6, __BASE_OR_IFACE), REG(a0, struct TagItem *ta
 
     initialize_socket_errno(state);
 
+    OSSL_PROVIDER_load(NULL, "default");
+
     err = 0;
   }
   else
