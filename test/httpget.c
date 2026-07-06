@@ -217,19 +217,28 @@ BOOL GetURL(char *url, char *userinfo, SSL_CTX *sslctx)
             if (lk) CRYPTO_THREAD_lock_free(lk);
         }
         Printf("[G2l] Creating SSL BIO chain...\n");
-        sbio = BIO_new_ssl_connect(sslctx);
+        {
+            SSL *ssl_obj = SSL_new(sslctx);
+            if (ssl_obj) {
+                SSL_set_connect_state(ssl_obj);
+                BIO *conn = BIO_new(BIO_s_connect());
+                if (conn) {
+                    BIO *ssl = BIO_new(BIO_f_ssl());
+                    if (ssl) {
+                        BIO_set_ssl(ssl, ssl_obj, 1);
+                        sbio = BIO_push(ssl, conn);
+                    } else {
+                        SSL_free(ssl_obj);
+                        BIO_free(conn);
+                    }
+                } else {
+                    SSL_free(ssl_obj);
+                }
+            }
+        }
         Printf("[G2m] sbio=%p\n", (void*)sbio);
         if (!sbio) {
-            Printf("BIO_new_ssl_connect failed\n");
-            return FALSE;
-        }
-        Printf("[G3] Connecting to %s...\n", hostport);
-        BIO_set_conn_hostname(sbio, hostport);
-        Printf("[G2j] Creating SSL BIO chain...\n");
-        sbio = BIO_new_ssl_connect(sslctx);
-        Printf("[G2k] sbio=%p\n", (void*)sbio);
-        if (!sbio) {
-            Printf("BIO_new_ssl_connect failed\n");
+            Printf("BIO chain creation failed\n");
             return FALSE;
         }
         Printf("[G3] Connecting to %s...\n", hostport);
