@@ -442,11 +442,12 @@ LIBPROTO(__UserLibCleanup, void, REG(a6, UNUSED __BASE_OR_IFACE), REG(a0, struct
 {
   TRACELINE();
 
-  // we call OPENSSL_cleanup to clean everything for the
-  // current instance.
-  OPENSSL_cleanup();
-
-  CRYPTO_THREAD_cleanup();
+  // Skip OPENSSL_cleanup() — it resets RUN_ONCE guards but doesn't
+  // properly reinitialize them on next use, causing SSL_CTX_new to
+  // fail on subsequent runs. Global provider state persists across
+  // library opens which is acceptable on AmigaOS/AROS.
+  // OPENSSL_cleanup();
+  // CRYPTO_THREAD_cleanup();
 
   if(libBase->parent->thread_hash)
   {
