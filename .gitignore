@@ -12,3 +12,15 @@ amissl-4.12-inProgress/
 *.gch
 core
 *.bak
+# Workspace .md files (keep local only)
+/AGENTS.md
+/AROS_BUILD_NOTES.md
+/BUILD_STATUS.md
+/CHANGE_LOG.md
+/CHANGES.md
+/HOSTED_AROS_GUIDE.md
+/INSTALL_ASSIGN.md
+/METHODS_TRIED.md
+/PATCH_LOG.md
+/RESUME_LATER.md
+/SESSION_LOG.md
