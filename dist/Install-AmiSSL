@@ -1,0 +1,621 @@
+; $VER: Install-AmiSSL 5.13 (22.12.2023)
+
+(set #AmiUpdate (if (= @app-name "AmiUpdate") 1 0))
+
+(set @app-name "AmiSSL")
+
+(if (= (exists "Env:Language") 1)
+	(set @language (getenv "Language"))
+)
+
+(if (= #AmiUpdate 0) (welcome))
+
+;----------------------------------------------------------------------------
+; /// ***** English
+(set #str-acknowledgeOS (cat
+	"Please acknowledge the automatic\n"
+	"detection of your operating system:")
+)
+(set #str-amissl-assign (cat
+	"The Installer has detected that you already have the "
+	"AmiSSL: assign pointing to \"%s\". Would you like to install and "
+	"upgrade AmiSSL there using your previous installation choices?\n\n"
+	"Note: It is strongly recommended to have all AmiSSL releases "
+	"installed into the same directory. Installations in different "
+	"directories will most likely require manual intervention in "
+	"User-Startup.")
+)
+(set #str-no-help "No help available")
+(set #str-dest-dir (cat
+	"Where would you like to install AmiSSL? A directory named "
+	"AmiSSL WILL be created there.")
+)
+(set #str-certs-older-over-newer (cat
+	"It seems that you already have a newer version of AmiSSL "
+	"installed. It is recommended that you do not install the "
+	"certificates from this, older version and keep the "
+	"currently installed certificates from the newer version.\n\n"
+	"Would you like to keep the currently installed "
+	"certificates?")
+)
+(set #str-certs-keep "Keep installed certificates")
+(set #str-certs-replace "Replace certificates")
+(set #str-add-path (cat
+	"Would you like to add AmiSSL: to your path? This will make it "
+	"possible to execute the OpenSSL tool without specifying full "
+	"path to it.")
+)
+(set #str-add-assign (cat
+	"The AmiSSL: assign needs to be added to User-Startup "
+	"so that AmiSSL can find its certificates.")
+)
+(set #str-success (cat
+	"AmiSSL %ld.%ld installation finished succesfully. Enjoy!\n\n"
+	"(Please reboot for modifications to take effect)")
+)
+(set #str-reboot-before-install (cat
+	"The installer has detected that a running application is using "
+	"AmiSSL. Please close all applications that are using AmiSSL and "
+	"run the installer again.\n\n"
+	"If this message persists, reboot and try again.")
+)
+(set #str-deleting-certs "Deleting old certificates")
+(set #str-amiupdate-copyfile "Copying file via AmiUpdate:\n%s\n\nTo drawer:\n%s")
+(set #str-cpu-68k (cat
+	"AmiSSL comes in two versions optimised for different processors. "
+	"Which version of AmiSSL would you like to install?")
+)
+(set #str-cleaning-old-libs "Deleting redundant old libraries")
+
+; ///
+; /// ***** Deutsch
+(if (= @language "deutsch")
+)
+
+; ///
+; /// ***** Svenska
+(if (= @language "svenska") (
+
+(set #str-acknowledgeOS (cat
+	"Var god verifiera den automatiska\n"
+        "detekteringen av ditt operativsystem:")
+)
+(set #str-amissl-assign (cat
+	"Installeraren har upptäckt att du redan har en AmiSSL: "
+	"tilldelning som pekar till \"%s\". Vill du installera och "
+	"uppgradera AmiSSL där med dina tidigare installationsval?\n\n"
+	"Notera: Det är starkt rekommenderat att ha alla AmiSSL versioner "
+	"installerade i samma katalog. Installationer i olika kataloger "
+	"kommer mest troligt kräva manuell redigering i User-Startup.")
+)
+(set #str-no-help "Ingen hjälp tillgänglig")
+(set #str-dest-dir (cat
+	"Var vill du installera AmiSSL? En katalog med namnet "
+	"AmiSSL KOMMER att skapas där.")
+)
+(set #str-certs-older-over-newer (cat
+	"Det verkar som du redan har en nyare version av AmiSSL "
+	"installerad. Det är rekommenderat att du inte installerar "
+	"certifikaten från denna äldre version och att du behåller "
+	"de nuvarande installerade certifikaten från den nyare versionen.\n\n"
+	"Vill du behålla de nuvarande installerade certifikaten?")
+)
+(set #str-certs-keep "Behåll installerade certifikat")
+(set #str-certs-replace "Ersätt certifikat")
+(set #str-add-path (cat
+	"Vill du lägga till AmiSSL: till din sökväg? Detta gör det "
+	"möjligt att exekvera OpenSSL verktyget utan att behöva "
+	"ange full sökväg till det.")
+)
+(set #str-add-assign (cat
+	"AmiSSL: tilldelningen behöver läggas till i User-Startup "
+	"så att AmiSSL kan hitta sina certifikat.")
+)
+(set #str-success (cat
+	"AmiSSL %ld.%ld installeringen avslutades framgångsrikt. Mycket nöje!\n\n"
+	"(Var god starta om datorn för att ändringarna ska få effekt)")
+)
+(set #str-reboot-before-install (cat
+	"Installeraren har upptäckt att ett program använder AmiSSL."
+	"Var god stäng alla program som använder AmiSSL och kör "
+	"installeraren igen.\n\n"
+	"Om detta meddelande upprepas, starta om och försök igen.")
+)
+(set #str-deleting-certs "Raderar gamla certifikat")
+(set #str-amiupdate-copyfile "Kopierar fil via AmiUpdate:\n%s\n\nTill låda:\n%s")
+(set #str-cpu-68k (cat
+	"AmiSSL kommer i två versioner, optimerade för olika processorer. "
+	"Vilken version av AmiSSL vill du installera?")
+)
+(set #str-cleaning-old-libs "Raderar onödiga gamla bibliotek")
+
+))
+
+; ///
+; /// ***** Italiano
+(if (= @language "italiano") (
+
+(set #str-acknowledgeOS (cat
+	"Per favore conferma il rilevamento automatico\n"
+	"del tuo sistema operativo:")
+)
+(set #str-amissl-assign (cat
+	"L'installer ha rilevato la presenza di un assign AmiSSL: già esistente "
+	"che punta a \"%s\". Si desidera installare ed aggiornare "
+	"AmiSSL li usando le tue precedenti scelte di installazione?\n\n"
+	"Nota: Nel caso sia già presente una vecchia versione, oppure in caso "
+	"di installazioni future è fortemente consigliato l'uso della stessa directory "
+	"per le installazione di AmiSSL. L'installazione di ulteriori versioni su "
+	"directory differenti potrebbe infatti richiedere all'utente un ulteriore "
+	"intervento manuale sulla User-Startup.")
+)
+(set #str-no-help "Nessun aiuto disponibile")
+(set #str-dest-dir (cat
+	"Dove si desidera installare AmiSSL? Una directory chiamata "
+	"AmiSSL verrà creata li.")
+)
+(set #str-certs-older-over-newer (cat
+	"Sembra che tu abbia già installato nel tuo sistema una versione più "
+	"recente di AmiSSL, si consiglia di non installare i certificati da questa "
+	"versione e di conservare invece i certificati attualmente installati "
+	"dalla versione più recente.\n\n"
+	"Si desidera conservare i certificati correntemente installati?")
+)
+(set #str-certs-keep "Mantenimento dei certificati installati")
+(set #str-certs-replace "Sostituzione dei certificati")
+(set #str-add-path (cat
+	"Si desidera aggiungere AmiSSL: al tuo percorso? Questo renderà "
+	"possibile l'esecuzione dello strumento OpenSSL senza la necessità "
+	"di doverne specificare il percorso completo.")
+)
+(set #str-add-assign (cat
+	"Un assign AmiSSL: dovrà essere aggiunto alla User-Startup "
+	"in modo che AmiSSL possa trovare i suoi certificati.")
+)
+(set #str-success (cat
+	"Installazione di AmiSSL %ld.%ld completata con successo!\n\n"
+	"(Riavvia il computer per completare l'installazione)")
+)
+(set #str-reboot-before-install (cat
+	"Il programma di installazione ha rilevato che un'applicazione "
+	"attualmente in esecuzione sta usando AmiSSL. Per favore "
+	"chiudi tutte le applicazioni che stanno usando AmiSSL e "
+	"riavvia nuovamente l'installazione.\n\n"
+	"Se il messaggio persiste, riavvia il computer e riprova.")
+)
+(set #str-deleting-certs "Eliminazione dei vecchi certificati")
+(set #str-amiupdate-copyfile "Copia dei file tramite AmiUpdate:\n%s\n\nNel cassetto:\n%s")
+(set #str-cpu-68k (cat
+	"AmiSSL è disponibile in due versioni ottimizzate per processori diversi. "
+	"Quale versione di AmiSSL si desidera installare?")
+)
+(set #str-cleaning-old-libs "Eliminazione delle vecchie librerie ridondanti")
+
+))
+
+; ///
+
+;----------------------------------------------------------------------------
+; /// Checking environment
+(set EXEC_ver (getversion "exec.library" (resident)))
+(set NEWLIB_ver (getversion "newlib.library" (resident)))
+(set AROS_ver (getversion "aros.library" (resident)))
+
+; we use newlib.library to check whether we are running on AmigaOS 4.x
+(if (>= NEWLIB_ver (* 4 65536))
+    (set #detectedSystem 1)
+    (
+        ; we are not running on AmigaOS 4.x
+        (if (>= AROS_ver (* 40 65536))
+            (set #detectedSystem 3)
+            (
+                ; we are not running on AROS
+                ; now check if we are running on MorphOS (exec.library V50+) or on AmigaOS 3.x
+                (if (>= EXEC_ver (* 50 65536))
+                    (set #detectedSystem 2)
+                    (set #detectedSystem 0)
+                )
+            )
+        )
+    )
+)
+
+(if (= #AmiUpdate 1)
+    (set #detectedSystem 1)
+    ; else
+    (set #detectedSystem
+        (askchoice
+            (prompt #str-acknowledgeOS)
+            (help @askchoice-help)
+            (choices "AmigaOS 3.x"
+                     "AmigaOS 4.x"
+                     "MorphOS 1.x/2.x/3.x"
+                     ;"AROS i386"
+                     ;"AROS PPC"
+                     ;"AROS x86_64"
+            )
+            (default #detectedSystem)
+        )
+    )
+)
+; finally convert the system number into a string for easier understanding
+(set #detectedSystem
+	(select #detectedSystem "os3" "os4" "mos" "aros-i386" "aros-ppc" "aros-x86_64")
+)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Here we go!
+
+(complete 0)
+
+(set #amissl-assign (getassign "AmiSSL"))
+
+; Standard install - everything goes in AmiSSL:
+(set #selfContained 1)
+
+; Default install path
+(if (<> #amissl-assign "")
+	(
+		(set #dest-dir #amissl-assign)
+		(set #updateInstall 1)
+	)
+	; else
+	(
+		(set #dest-dir (tackon (if (exists "Work:" (noreq)) "Work:" "SYS:") "AmiSSL"))
+		(set #updateInstall 0)
+	)
+)
+
+; Set up the source and destination path
+(if (= #detectedSystem "os3")
+	(set #src-os-dir "AmigaOS3")
+)
+(if (= #detectedSystem "os4")
+	(
+		(set #src-os-dir "AmigaOS4")
+		(set #selfContained 0)
+		(set #updateInstall 1)
+		(set #dest-dir "SYS:")
+		(set #storage-dir (if (<> #amissl-assign "") #amissl-assign "DEVS:AmiSSL"))
+		(set #cmd-dir "SYS:C")
+		(set #docs-dir "SYS:Documentation/AmiSSL")
+	)
+)
+(if (= #detectedSystem "mos")
+	;(set #src-os-dir "MorphOS")
+	(set #src-os-dir "AmigaOS3")
+)
+(if (= #detectedSystem "aros-i386")
+	(set #src-os-dir "AROS-i386")
+)
+(if (= #detectedSystem "aros-ppc")
+	(set #src-os-dir "AROS-ppc")
+)
+(if (= #detectedSystem "aros-x86_64")
+	(set #src-os-dir "AROS-x86_64")
+)
+; ///
+
+;----------------------------------------------------------------------------
+; /// For an existing install, check if to update or start afresh
+(if (and (= #updateInstall 1) (= #selfContained 1))
+	(set #updateInstall
+		(askbool
+			(prompt (#str-amissl-assign #amissl-assign))
+			(help #str-no-help)
+			(default 1)
+		)
+	)
+)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Ask for new installation dir, if required
+(if (= #updateInstall 0)
+	(set #dest-dir
+		(tackon
+			(askdir
+				(prompt #str-dest-dir)
+				(default (pathonly #dest-dir))
+				(help @askdir-help)
+			)
+			"AmiSSL"
+		)
+	)
+)
+
+(makedir #dest-dir (infos))
+
+(if (= #selfContained 1)
+	(
+		(set #storage-dir #dest-dir)
+		(set #docs-dir #dest-dir)
+		(set #cmd-dir #dest-dir)
+	)
+)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Install libraries
+
+(set #libs-dir (tackon #dest-dir "Libs"))
+(set #libs-src-dir (tackon "Libs" #src-os-dir))
+
+(set #old-lib-ver (getversion "LIBS:amisslmaster.library"))
+(set #new-lib-ver (getversion (tackon #libs-src-dir "amisslmaster.library")))
+(set #amissl-ver (/ #new-lib-ver 65536))
+(set #amissl-rev (- #new-lib-ver (* #amissl-ver 65536)))
+
+; Try to force ramlib on OS4 to expunge libraries to release exclusive
+; library file locks, which is necessary until AmiSSL 5.6 + elf.library 53.35
+(if (= #detectedSystem "os4")
+	(
+		(set #elflib-ver (getversion "elf.library" (resident)))
+		(set #elflib-min (+ (* 65536 53) 35))
+		(set #amissl-min (+ (* 65536 5) 6))
+		(foreach (tackon #libs-dir "AmiSSL") "amissl_v#?.library"
+			(
+				(set #resident-lib-ver (getversion @each-name (resident)))
+				(if (AND (> #resident-lib-ver 0) (OR (< #resident-lib-ver #amissl-min) (< #elflib-ver #elflib-min)))
+					(
+						(set #lib-name ((tackon (tackon #libs-dir "AmiSSL") @each-name)))
+						(rename #lib-name (cat #lib-name "-expunge"))
+						(rename (cat #lib-name "-expunge") #lib-name)
+					)
+				)
+
+			)
+		)
+		(set #resident-lib-ver (getversion "amisslmaster.library" (resident)))
+		(if (AND (> #resident-lib-ver 0) (OR (< #resident-lib-ver #amissl-min) (< #elflib-ver #elflib-min)))
+			(
+				(set #lib-name (tackon #libs-dir "amisslmaster.library"))
+				(rename #lib-name (cat #lib-name "-expunge"))
+				(rename (cat #lib-name "-expunge") #lib-name)
+				(set #resident-lib-ver (getversion "amisslmaster.library" (resident)))
+				(if (> #resident-lib-ver 0)
+					(abort #str-reboot-before-install)
+				)
+			)
+		)
+	)
+)
+
+(if (= #AmiUpdate 1)
+	(
+		(working (#str-amiupdate-copyfile (tackon #libs-src-dir "amisslmaster.library")  #libs-dir))
+		(run "CopyStore " (tackon #libs-src-dir "amisslmaster.library") " "  #libs-dir)
+	)
+	; else
+	(copyfiles
+		(source (tackon #libs-src-dir "amisslmaster.library"))
+		(dest #libs-dir)
+	)
+)
+
+(complete 10)
+
+(if (= #src-os-dir "AmigaOS3")
+	(
+		(if (= #detectedSystem "mos")
+			(set #cpu-id 0)
+			; else
+			(set #cpu-id
+				(if (OR (= (database "cpu") "68060")
+				    (OR (<> (getversion "68060.library" (resident)) 0)
+				        (<> (getversion "amithlon.resource" (resident)) 0)))
+				1 0)
+			)
+		)
+		(set #cpu-id
+			(askchoice
+				(prompt #str-cpu-68k)
+				(help @askchoice-help)
+				(choices "68020/030/040/080 or MorphOS" "68060 or Amithlon")
+				(default #cpu-id)
+			)
+		)
+		(set #cpu-dir (if (= 1 #cpu-id) "68060" "68020-40" ))
+	)
+	; else
+	(set #cpu-dir "")
+)
+
+(foreach (tackon (tackon #libs-src-dir "AmiSSL") #cpu-dir) "amissl_v#?.library"
+	(if (= #AmiUpdate 1)
+		(
+			(working (#str-amiupdate-copyfile (tackon (tackon #libs-src-dir "AmiSSL") @each-name) (tackon #libs-dir "AmiSSL")))
+			(run "CopyStore " (tackon (tackon #libs-src-dir "AmiSSL") @each-name) " " (tackon #libs-dir "AmiSSL"))
+		)
+		; else
+		(copyfiles
+			(source (tackon (tackon (tackon #libs-src-dir "AmiSSL") #cpu-dir) @each-name))
+			(dest (tackon #libs-dir "AmiSSL"))
+		)
+	)
+)
+
+(complete 25)
+
+(working #str-cleaning-old-libs)
+(foreach (tackon #libs-dir "AmiSSL") "amissl_v3??.library"
+	(if	; Only delete versions older than ours, and not any special exceptions
+		(< (getversion (tackon (tackon #libs-dir "AmiSSL") @each-name)) #new-lib-ver)
+		(delete (tackon (tackon #libs-dir "AmiSSL") @each-name))
+	)
+)
+
+(complete 30)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Install documentation
+
+(makedir #docs-dir (infos))
+
+(copyfiles
+	(source "Doc/AmiSSL.doc")
+	(dest #docs-dir)
+	(infos)
+)
+
+(complete 40)
+
+(copyfiles
+	(source "Doc/OpenSSL.doc")
+	(dest #docs-dir)
+	(infos)
+)
+
+(complete 45)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Install OpenSSL tool
+
+(if (= #AmiUpdate 1)
+	(
+		(working (#str-amiupdate-copyfile (tackon "C" (tackon #src-os-dir "OpenSSL")) #cmd-dir))
+		(run "CopyStore " (tackon "C" (tackon #src-os-dir "OpenSSL")) " " #cmd-dir)
+	)
+	; else
+	(copyfiles
+		(source (tackon "C" (tackon #src-os-dir "OpenSSL")))
+		(dest #cmd-dir)
+	)
+)
+
+(if (NOT (exists (tackon #storage-dir "openssl.cnf")))
+	(copyfiles
+		(source "C/openssl.cnf")
+		(dest #storage-dir)
+	)
+)
+
+(copyfiles
+	(source "C")
+	(pattern "#?.pl")
+	(dest #storage-dir)
+	(files)
+)
+
+(complete 60)
+; ///
+
+;----------------------------------------------------------------------------
+; /// Install Certificates
+
+(set #certs-dir (tackon #storage-dir "Certs"))
+(set #certs-dir-exists (if (= (exists #certs-dir (noreq)) 2) 1 0))
+(set #delete-old-certs #certs-dir-exists)
+(set #copy-certs 1)
+
+(if
+	(and
+		(= #certs-dir-exists 1)
+		(> #old-lib-ver #new-lib-ver)
+	)
+	(if	(askbool
+			(prompt #str-certs-older-over-newer)
+			(choices #str-certs-keep #str-certs-replace)
+			(help #str-no-help)
+			(default 1)
+		)
+		(
+			(set #delete-old-certs 0)
+			(set #copy-certs 0)
+		)
+		; else
+		(
+			(set #delete-old-certs 1)
+			(set #copy-certs 1)
+		)
+	)
+)
+
+(if (= #delete-old-certs 1)
+	(
+		(working #str-deleting-certs)
+		(foreach #certs-dir "#?"
+			(delete (tackon #certs-dir @each-name))
+		)
+	)
+)
+
+(complete 75)
+
+(if (= #copy-certs 1)
+	(if (exists (tackon #certs-dir "disabled"))
+		(foreach "Certs" "#?"
+			(if (exists (tackon (tackon #certs-dir "disabled") @each-name))
+				(copyfiles
+					(source (tackon "Certs" @each-name))
+					(dest (tackon #certs-dir "disabled"))
+				)
+				;else
+				(copyfiles
+					(source (tackon "Certs" @each-name))
+					(dest #certs-dir)
+				)
+			)
+		)
+		;else
+		(copyfiles
+			(source "Certs")
+			(dest #certs-dir)
+			(all)
+		)
+	)
+)
+
+(makedir (tackon #storage-dir "UserCerts"))
+(makedir (tackon #storage-dir "Private"))
+
+(complete 90)
+; ///
+
+;----------------------------------------------------------------------------
+; /// S:User-Startup additions
+
+(set #startup-command "")
+
+; If assign missing (OS4 install) or new install
+(if (or (= #updateInstall 0) (= #amissl-assign ""))
+	(set #startup-command (cat "Assign AmiSSL: \"" #storage-dir "\"\n"))
+)
+
+(if (= #updateInstall 0)
+	(set #startup-command
+		(cat #startup-command
+			"If Exists AmiSSL:Libs\n"
+			"  Assign LIBS: AmiSSL:Libs ADD\n"
+			"EndIf\n"
+		)
+	)
+)
+
+(if (= #updateInstall 0)
+	(if	(askbool
+			(prompt #str-add-path)
+			(help #str-no-help)
+			(default 1)
+		)
+		(set #startup-command (cat #startup-command "Path AmiSSL: ADD\n"))
+	)
+)
+
+(if (<> #startup-command "")
+	(startup @app-name
+		(prompt #str-add-assign)
+		(help @startup-help)
+		(command #startup-command)
+	)
+)
+
+; /// ********************
+;----------------------------------------------------------------------------
+
+(complete 100)
+(set @default-dest #dest-dir)
+(if (= #AmiUpdate 1) (exit (quiet)) (exit (#str-success #amissl-ver #amissl-rev)))

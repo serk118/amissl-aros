@@ -1,0 +1,205 @@
+/***************************************************************************
+
+ AmiSSL - OpenSSL wrapper for AmigaOS-based systems
+ Copyright (c) 1999-2006 Andrija Antonijevic, Stefan Burstroem.
+ Copyright (c) 2006-2026 AmiSSL Open Source Team.
+ All Rights Reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License in the file LICENSE in the
+ source distribution or at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+ AmiSSL Official Support Site: https://github.com/jens-maus/amissl
+
+***************************************************************************/
+
+This is a short documentation on how to update the OpenSSL kernel within
+the AmiSSL repository. We are actually using the "git subtree" functionality
+to be able to easily merge new updated OpenSSL versions into our git
+repository. So please refer to [1] and [2] for more information on git
+subtrees.
+
+HowTo update the OpenSSL version in "openssl/":
+
+1. To merge in a new OpenSSL version execute the following git command
+   within a working copy of the AmiSSL repository:
+   
+   $ git subtree pull --prefix openssl --squash https://github.com/openssl/openssl.git openssl-3.6.0
+
+   Note, that "openssl-3.6.0" can be replaced by any branch or tag of
+   the OpenSSL git repository at github.com.
+
+   After execution of the above subtree command git will try to merge in all
+   changes between the currently utilized OpenSSL version and the one specified
+   and also adds the local changes applied due to our AmiSSL changes.
+
+2. In many cases the above command will result in merge conflicts which you
+   need to resolve accordingly before you can commit the changes accordingly.
+
+   Use the following command to display a list of files still in conflict:
+
+   $ git diff --name-only --diff-filter=U
+
+3. Do a "git diff HEAD" to check what has actually changed in OpenSSL since the last
+   version:
+
+   $ git diff HEAD
+
+   Especially interesting are changes to:
+
+   $ git diff HEAD openssl/util/libssl.num
+   $ git diff HEAD openssl/util/libcrypto.num
+
+   In there the OpenSSL crew usually registered changes to the internal+external API,
+   e.g. removal or addition of functions. Note, however, that changes to existing
+   functions have to be looked up by reviewing all changes in the   
+   'openssl/include/openssl' path. Thus, a simple command like
+
+   $ git diff HEAD openssl/include/openssl
+
+   should reveal changes to the public API.
+
+   -> use also the online ABI tracker to review API/ABI changes:
+      http://abi-laboratory.pro/tracker/timeline/openssl/index.html
+  
+4. If you identified changes to the public API you will have to adapt the following
+   xml description file:
+
+   include/xml/amissl.xml
+
+   When changing the "include/xml/amissl.xml" file the following rules apply:
+   -> functions should be renamed, only if the OpenSSL team has simply replaced
+      the old name with a macro mapping to the new name and there are no changes
+      in the parameters, otherwise...
+   -> if functions are removed by the OpenSSL team and mapped to a new function
+      instead, using a macro with differing parameters, simply add the
+      "OBSOLETE_" prefix to the name (the macro will then get used in the stub
+      function for backwards compatibility). If no macro exists...
+   -> don't remove any function, but instead flag them as "unimplemented".
+   -> only add new functions to the bottom of the xml file and not between
+      existing function definitions.
+   -> 'va_list' types won't work, have a look at how "long *" is used instead
+      (e.g. for BIO_printf)
+   -> be sure to declare varargs functions directly after their stdargs
+      counterpart, as this is critical for the m68k build. If there is only a
+      varargs function and no stdargs function, you will need to create one
+      (e.g. EVP_PKEY_Q_keygen - we added EVP_PKEY_Q_vkeygen ourselves)
+   -> follow existing m68k register allocation rules, prioritising d0-d7 for
+      non-pointer arguments and a0-a3 for pointers, incrementally using them in
+      the order of the arguments. Do not use any other registers (a4 and a5 are
+      problematic, so never use them).
+   -> make sure 64-bit arguments (e.g. double, long long, uint64_t, int64_t)
+      explictly declare the m68k 32-bit register pair to use (e.g. d0-d1).
+      Additionally, for VBCC compatibility, try to use only even pairs (i.e.
+      either d0-d1, d2-d3, d4-d5 or d6-d7) and reallocate other arguments to help.
+   -> if a function has a large number of arguments, requiring more than 12 m68k
+      registers, you should split this into two functions and use a macro to join
+      them back up. See RSA_X931_derive_ex for an example. Try to split register
+      usage as equally as possible between the two functions, to help compilers
+      generate better code.
+
+   NOTE: tools/newXMLhelper.pl can be used to help with this, cross-referencing
+   various files and finally generating the required xml output which you may
+   then manually add to the end of amissl.xml - however, the output should
+   still be verified manually as it might not handle every single case.
+
+5. Afterwards you will have to regenerate all interface description files (sfd, fd,
+   protos, etc.) using the following command-line:
+
+   $ cd src
+   $ ./mkidl.sh
+
+   Please note that this will only work if you have the latest idltool (53.32 being
+   the current minimum requirement), etc. installed in your cross compiler environment.
+
+6. Check "include/amissl/amissl.h" to directly include all existing header files
+   located in "include/openssl/". Due to some header file changes of newer versions
+   amissl.h needs usually some tuning.
+
+7. Modify the top-level 'Makefile' and change the following section:
+
+     VERSION=5
+     REVISION=1
+
+8. Modify the "src/amisslmaster_library.c" and "include/libraries/amisslmaster.h"
+   files and have a look for the following type of sections in OpenAmiSSL():
+
+   -- cut here --
+   if(LibAPIVersion == AMISSL_V30x)
+   {
+    [...]
+    OpenLib(&AmiSSLBase,"300");
+    [...]
+   }
+   -- cut here --
+
+   Make sure you add a new OpenLib() call in the right section (and with the correct
+   logic) so that the newly created "amissl_vXXX.library" can be opneed by the
+   amisslmaster.library.
+ 
+   When new functions are added to amissl.xml you must create a new AMISSL_Vnnnx
+   definition in "libraries/amisslmaster.library" and ensure the logic added above
+   allows older applications to load newer backwards compatible libraries, but
+   prevent new applications (requiring newly added OpenSSL API functions) from
+   loading older libraries (otherwise crashes will occur).
+
+9. Review all changes with "git status" and make sure to commit everything
+   properly. Also use "git diff HEAD" at the end again to double check your changes.
+
+
+HowTo generate a diff file of our OpenSSL changes:
+
+1. Add a remote 'openssl' branch to your git working copy and fetch all branches
+   and tags accordingly:
+
+   $ git remote add openssl https://github.com/openssl/openssl.git
+   $ git fetch openssl
+   $ git fetch -t openssl
+
+2. Generate the diff from the top-level dir of your working copy.
+
+   $ git diff openssl-3.0.0 master:openssl
+  
+   to generate a diff to a remote branch use the following command instead:
+
+   $ git diff master:openssl remotes/openssl/master
+
+
+How to build and release AmiSSL:
+
+1. Ensure CHANGES.md has been updated accordingly with the new release
+   information, including correct version and date.
+
+2. You can build and test AmiSSL locally on a Ubuntu installation with the
+   required AmigaOS compilers and tools installed. See Makefile for details,
+   but you can use "make release" to build AmiSSL and the release archives.
+
+3. However, when it comes to releasing AmiSSL updates, the easiest and
+   quickest way is to run the "Release Build" GitHub action workflow, which
+   will automatically build AmiSSL remotely and create a draft release, to
+   be tagged using the new version number.
+
+4. The above step may be repeated as many times as necessary and when you're
+   happy with the release files and have tested them, you may then publish
+   the release.
+
+5. After the release has been published, you may then run the "Aminet Upload"
+   GitHub action workflow which will use the files from the latest release
+   build results and upload them to Aminet. The version of AmiSSL currently
+   on Aminet is first checked, so only a newer of version of AmiSSL will
+   ever be uploaded.
+
+
+References:
+
+[1] https://gist.github.com/kvnsmth/4688345
+[2] https://medium.com/@v/git-subtrees-a-tutorial-6ff568381844#.q7ivzd39l

@@ -1,0 +1,405 @@
+/* New OpenSSL 3.x stubs for AROS - Auto-generated */
+#ifndef _AMISSL_STUBS_AROS_NEW_H
+#define _AMISSL_STUBS_AROS_NEW_H
+#ifdef __AROS__
+
+AROS_LD3(LONG,ASYNC_WAIT_CTX_get_callback,
+    AROS_LDA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LDA(ASYNC_callback_fn *, callback, A1),
+    AROS_LDA(void **, callback_arg, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(LONG,ASYNC_WAIT_CTX_get_status,
+    AROS_LDA(ASYNC_WAIT_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,ASYNC_WAIT_CTX_set_callback,
+    AROS_LDA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LDA(ASYNC_callback_fn, callback, A1),
+    AROS_LDA(void *, callback_arg, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,ASYNC_WAIT_CTX_set_status,
+    AROS_LDA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LDA(int, status, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,BN_bn2nativepad,
+    AROS_LDA(const BIGNUM *, a, A0),
+    AROS_LDA(unsigned char *, to, A1),
+    AROS_LDA(int, tolen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(APTR,BN_native2bn,
+    AROS_LDA(const unsigned char *, s, A0),
+    AROS_LDA(int, len, D0),
+    AROS_LDA(BIGNUM *, ret, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,CRYPTO_alloc_ex_data,
+    AROS_LDA(int, class_index, D0),
+    AROS_LDA(void *, obj, A0),
+    AROS_LDA(CRYPTO_EX_DATA *, ad, A1),
+    AROS_LDA(int, idx, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EC_GROUP_get0_field,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,EVP_KDF_CTX_free,
+    AROS_LDA(EVP_KDF_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EVP_KDF_CTX_get_kdf_size,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,EVP_KDF_CTX_reset,
+    AROS_LDA(EVP_KDF_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,EVP_KDF_derive,
+    AROS_LDA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LDA(unsigned char *, key, A1),
+    AROS_LDA(size_t, keylen, D0),
+    AROS_LDA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EVP_KDF_get0_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,EVP_MAC_CTX_dup,
+    AROS_LDA(const EVP_MAC_CTX *, src, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,EVP_MAC_CTX_free,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,EVP_MAC_CTX_get0_mac,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EVP_MAC_CTX_get_mac_size,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,EVP_MAC_CTX_new,
+    AROS_LDA(EVP_MAC *, mac, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,EVP_MAC_final,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LDA(unsigned char *, out, A1),
+    AROS_LDA(size_t *, outl, A2),
+    AROS_LDA(size_t, outsize, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,EVP_MAC_finalXOF,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LDA(unsigned char *, out, A1),
+    AROS_LDA(size_t, outsize, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,EVP_MAC_init,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LDA(const unsigned char *, key, A1),
+    AROS_LDA(size_t, keylen, D0),
+    AROS_LDA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,EVP_MAC_update,
+    AROS_LDA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LDA(const unsigned char *, data, A1),
+    AROS_LDA(size_t, datalen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,EVP_PKEY_digestsign_supports_digest,
+    AROS_LDA(EVP_PKEY *, pkey, A0),
+    AROS_LDA(OSSL_LIB_CTX *, libctx, A1),
+    AROS_LDA(const char *, name, A2),
+    AROS_LDA(const char *, propq, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EVP_PKEY_get1_encoded_public_key,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,EVP_PKEY_set1_encoded_public_key,
+    AROS_LDA(EVP_PKEY *, pkey, A0),
+    AROS_LDA(const unsigned char *, pub, A1),
+    AROS_LDA(size_t, publen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,EVP_Q_mac,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,OPENSSL_LH_flush,
+    AROS_LDA(OPENSSL_LHASH *, lh, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_version_build_metadata,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_version_major,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_version_minor,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_version_patch,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_version_pre_release,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_default_cipher_list,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_default_ciphersuites,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_EC_curve_nid2name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD9(LONG,OSSL_HTTP_parse_url,
+    AROS_LDA(const char *, url, A0),
+    AROS_LDA(int *, pssl, A1),
+    AROS_LDA(char **, puser, A2),
+    AROS_LDA(char **, phost, A3),
+    AROS_LDA(char **, pport, D0),
+    AROS_LDA(int *, pport_num, D1),
+    AROS_LDA(char **, ppath, D2),
+    AROS_LDA(char **, pquery, D3),
+    AROS_LDA(char **, pfrag, D4),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,OSSL_HTTP_REQ_CTX_exchange,
+    AROS_LDA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(APTR,OSSL_HTTP_REQ_CTX_new,
+    AROS_LDA(BIO *, wbio, A0),
+    AROS_LDA(BIO *, rbio, A1),
+    AROS_LDA(int, buf_size, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(LONG,OSSL_HTTP_REQ_CTX_set1_req,
+    AROS_LDA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    AROS_LDA(const char *, content_type, A1),
+    AROS_LDA(const ASN1_ITEM *, it, A2),
+    AROS_LDA(const ASN1_VALUE *, req, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD5(LONG,OSSL_HTTP_REQ_CTX_set_request_line,
+    AROS_LDA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    AROS_LDA(int, method_POST, D0),
+    AROS_LDA(const char *, server, A1),
+    AROS_LDA(const char *, port, A2),
+    AROS_LDA(const char *, path, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,OSSL_LIB_CTX_free,
+    AROS_LDA(OSSL_LIB_CTX *, a, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(APTR,OSSL_LIB_CTX_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_trace_get_category_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(LONG,OSSL_trace_get_category_num,
+    AROS_LDA(const char *, name, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,OSSL_trace_set_callback,
+    AROS_LDA(int, category, D0),
+    AROS_LDA(OSSL_trace_cb, callback, A0),
+    AROS_LDA(void *, data, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,OSSL_trace_set_channel,
+    AROS_LDA(int, category, D0),
+    AROS_LDA(BIO*, channel, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,OSSL_trace_set_prefix,
+    AROS_LDA(int, category, D0),
+    AROS_LDA(const char *, prefix, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,OSSL_trace_set_suffix,
+    AROS_LDA(int, category, D0),
+    AROS_LDA(const char *, suffix, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,SRP_user_pwd_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,SRP_user_pwd_set0_sv,
+    AROS_LDA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LDA(BIGNUM *, s, A1),
+    AROS_LDA(BIGNUM *, v, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,SRP_user_pwd_set1_ids,
+    AROS_LDA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LDA(const char *, id, A1),
+    AROS_LDA(const char *, info, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(void,SRP_user_pwd_set_gN,
+    AROS_LDA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LDA(const BIGNUM *, g, A1),
+    AROS_LDA(const BIGNUM *, N, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SRP_VBASE_add0_user,
+    AROS_LDA(SRP_VBASE *, vb, A0),
+    AROS_LDA(SRP_user_pwd *, user_pwd, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_add_store_cert_subjects_to_stack,
+    AROS_LDA(STACK_OF(X509_NAME, ___SSL_add_store_cert_subjects_to_stack_0, A0),
+    AROS_LDA(const char *, uri, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_load_verify_dir,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(const char *, CApath, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_load_verify_file,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(const char *, CAfile, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_load_verify_store,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(const char *, CAstore, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,SSL_CTX_new_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_set0_tmp_dh_pkey,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(EVP_PKEY *, dhpkey, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_set_async_callback,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(SSL_async_callback_fn, callback, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_set_async_callback_arg,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(void *, arg, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(LONG,SSL_CTX_set_default_verify_store,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_CTX_set_tlsext_ticket_key_evp_cb,
+    AROS_LDA(SSL_CTX *, ctx, A0),
+    AROS_LDA(int, (*fp, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,SSL_get0_peer_certificate,
+    AROS_LDA(const SSL *, s, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_get_async_status,
+    AROS_LDA(SSL *, s, A0),
+    AROS_LDA(int *, status, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,SSL_group_to_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,SSL_load_client_CA_file_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(LONG,SSL_new_session_ticket,
+    AROS_LDA(SSL *, s, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD5(LONG,SSL_sendfile,
+    AROS_LDA(SSL *, s, A0),
+    AROS_LDA(int, fd, D0),
+    AROS_LDA(off_t, offset, D1),
+    AROS_LDA(size_t, size, D2),
+    AROS_LDA(int, flags, D3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_set0_tmp_dh_pkey,
+    AROS_LDA(SSL *, s, A0),
+    AROS_LDA(EVP_PKEY *, dhpkey, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_set_async_callback,
+    AROS_LDA(SSL *, s, A0),
+    AROS_LDA(SSL_async_callback_fn, callback, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,SSL_set_async_callback_arg,
+    AROS_LDA(SSL *, s, A0),
+    AROS_LDA(void *, arg, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,TS_VERIFY_CTX_set_certs,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,UI_read_string_lib,
+    AROS_LDA(UI *, ui, A0),
+    AROS_LDA(UI_STRING *, uis, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,UI_write_string_lib,
+    AROS_LDA(UI *, ui, A0),
+    AROS_LDA(UI_STRING *, uis, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,X509_CRL_load_http,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(APTR,X509_load_http,
+    AROS_LDA(const char *, url, A0),
+    AROS_LDA(BIO *, bio, A1),
+    AROS_LDA(BIO *, rbio, A2),
+    AROS_LDA(int, timeout, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,X509_NAME_hash_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(APTR,d2i_OSSL_AA_DIST_POINT,
+    AROS_LDA(OSSL_AA_DIST_POINT **, a, A0),
+    AROS_LDA(const unsigned char **, in, A1),
+    AROS_LDA(long, len, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,i2d_OSSL_AA_DIST_POINT,
+    AROS_LDA(const OSSL_AA_DIST_POINT *, a, A0),
+    AROS_LDA(unsigned char **, out, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(void,OSSL_AA_DIST_POINT_free,
+    AROS_LDA(OSSL_AA_DIST_POINT *, a, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(APTR,OSSL_AA_DIST_POINT_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_AA_DIST_POINT_it,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD10(LONG,PEM_ASN1_write_bio_ctx,
+    AROS_LDA(OSSL_i2d_of_void_ctx *, i2d, A0),
+    AROS_LDA(void *, vctx, A1),
+    AROS_LDA(const char *, name, A2),
+    AROS_LDA(BIO *, bp, A3),
+    AROS_LDA(const void *, x, D0),
+    AROS_LDA(const EVP_CIPHER *, enc, D1),
+    AROS_LDA(const unsigned char *, kstr, D2),
+    AROS_LDA(int, klen, D3),
+    AROS_LDA(pem_password_cb *, cb, D4),
+    AROS_LDA(void *, u, D5),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(LONG,EVP_PKEY_get_security_category,
+    AROS_LDA(const EVP_PKEY *, pkey, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(void,X509_STORE_CTX_set_ocsp_resp,
+    AROS_LDA(X509_STORE_CTX *, ctx, A0),
+    AROS_LDA(STACK_OF(OCSP_RESPONSE, ___X509_STORE_CTX_set_ocsp_resp_1, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OPENSSL_sk_set_thunks,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,i2d_PKCS8PrivateKey,
+    AROS_LDA(const EVP_PKEY *, a, A0),
+    AROS_LDA(unsigned char **, pp, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,OSSL_PARAM_set_octet_string_or_ptr,
+    AROS_LDA(OSSL_PARAM *, p, A0),
+    AROS_LDA(const void *, val, A1),
+    AROS_LDA(size_t, len, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,OSSL_STORE_LOADER_settable_ctx_params,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,X509_CRL_get0_tbs_sigalg,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,CMS_RecipientInfo_kemri_cert_cmp,
+    AROS_LDA(CMS_RecipientInfo *, ri, A0),
+    AROS_LDA(X509 *, cert, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD2(LONG,CMS_RecipientInfo_kemri_set0_pkey,
+    AROS_LDA(CMS_RecipientInfo *, ri, A0),
+    AROS_LDA(EVP_PKEY *, pk, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD1(APTR,CMS_RecipientInfo_kemri_get0_ctx,
+    AROS_LDA(CMS_RecipientInfo *, ri, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CMS_RecipientInfo_kemri_get0_kdf_alg,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,CMS_RecipientInfo_kemri_set_ukm,
+    AROS_LDA(CMS_RecipientInfo *, ri, A0),
+    AROS_LDA(const unsigned char *, ukm, A1),
+    AROS_LDA(int, ukmLength, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD6(APTR,EVP_PKEY_derive_SKEY,
+    AROS_LDA(EVP_PKEY_CTX *, ctx, A0),
+    AROS_LDA(EVP_SKEYMGMT *, mgmt, A1),
+    AROS_LDA(const char *, key_type, A2),
+    AROS_LDA(const char *, propquery, A3),
+    AROS_LDA(size_t, keylen, D0),
+    AROS_LDA(const OSSL_PARAM *, params, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD3(LONG,EVP_KDF_CTX_set_SKEY,
+    AROS_LDA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LDA(EVP_SKEY *, key, A1),
+    AROS_LDA(const char *, paramname, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD6(APTR,EVP_KDF_derive_SKEY,
+    AROS_LDA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LDA(EVP_SKEYMGMT *, mgmt, A1),
+    AROS_LDA(const char *, key_type, A2),
+    AROS_LDA(const char *, propquery, A3),
+    AROS_LDA(size_t, keylen, D0),
+    AROS_LDA(const OSSL_PARAM *, params, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD4(APTR,EVP_SKEY_import_SKEYMGMT,
+    AROS_LDA(OSSL_LIB_CTX *, libctx, A0),
+    AROS_LDA(EVP_SKEYMGMT *, skeymgmt, A1),
+    AROS_LDA(int, selection, D0),
+    AROS_LDA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_malloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_calloc,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_aligned_alloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_realloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_clear_realloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_secure_malloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);
+AROS_LD0(LONG,CRYPTO_secure_calloc,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB);

@@ -1,0 +1,1045 @@
+/* New OpenSSL 3.x AROS stubs - Auto-generated. Maps new 3.x functions to UNIMPLEMENTED. */
+#ifdef __AROS__
+
+AROS_LH3(LONG,ASYNC_WAIT_CTX_get_callback,
+    AROS_LHA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LHA(ASYNC_callback_fn *, callback, A1),
+    AROS_LHA(void **, callback_arg, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(ASYNC_WAIT_CTX_get_callback, ASYNC_WAIT_CTX * ctx, ASYNC_callback_fn * callback, void ** callback_arg);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(LONG,ASYNC_WAIT_CTX_get_status,
+    AROS_LHA(ASYNC_WAIT_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(ASYNC_WAIT_CTX_get_status, ASYNC_WAIT_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,ASYNC_WAIT_CTX_set_callback,
+    AROS_LHA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LHA(ASYNC_callback_fn, callback, A1),
+    AROS_LHA(void *, callback_arg, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(ASYNC_WAIT_CTX_set_callback, ASYNC_WAIT_CTX * ctx, ASYNC_callback_fn callback, void * callback_arg);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,ASYNC_WAIT_CTX_set_status,
+    AROS_LHA(ASYNC_WAIT_CTX *, ctx, A0),
+    AROS_LHA(int, status, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(ASYNC_WAIT_CTX_set_status, ASYNC_WAIT_CTX * ctx, int status);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,BN_bn2nativepad,
+    AROS_LHA(const BIGNUM *, a, A0),
+    AROS_LHA(unsigned char *, to, A1),
+    AROS_LHA(int, tolen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(BN_bn2nativepad, const BIGNUM * a, unsigned char * to, int tolen);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(APTR,BN_native2bn,
+    AROS_LHA(const unsigned char *, s, A0),
+    AROS_LHA(int, len, D0),
+    AROS_LHA(BIGNUM *, ret, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(BN_native2bn, const unsigned char * s, int len, BIGNUM * ret);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,CRYPTO_alloc_ex_data,
+    AROS_LHA(int, class_index, D0),
+    AROS_LHA(void *, obj, A0),
+    AROS_LHA(CRYPTO_EX_DATA *, ad, A1),
+    AROS_LHA(int, idx, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(CRYPTO_alloc_ex_data, int class_index, void * obj, CRYPTO_EX_DATA * ad, int idx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EC_GROUP_get0_field,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,EVP_KDF_CTX_free,
+    AROS_LHA(EVP_KDF_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_KDF_CTX_free, EVP_KDF_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EVP_KDF_CTX_get_kdf_size,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,EVP_KDF_CTX_reset,
+    AROS_LHA(EVP_KDF_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_KDF_CTX_reset, EVP_KDF_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,EVP_KDF_derive,
+    AROS_LHA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LHA(unsigned char *, key, A1),
+    AROS_LHA(size_t, keylen, D0),
+    AROS_LHA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_KDF_derive, EVP_KDF_CTX * ctx, unsigned char * key, size_t keylen, const OSSL_PARAM * params);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EVP_KDF_get0_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,EVP_MAC_CTX_dup,
+    AROS_LHA(const EVP_MAC_CTX *, src, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_CTX_dup, const EVP_MAC_CTX * src);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,EVP_MAC_CTX_free,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_CTX_free, EVP_MAC_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,EVP_MAC_CTX_get0_mac,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_CTX_get0_mac, EVP_MAC_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EVP_MAC_CTX_get_mac_size,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,EVP_MAC_CTX_new,
+    AROS_LHA(EVP_MAC *, mac, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_CTX_new, EVP_MAC * mac);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,EVP_MAC_final,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LHA(unsigned char *, out, A1),
+    AROS_LHA(size_t *, outl, A2),
+    AROS_LHA(size_t, outsize, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_final, EVP_MAC_CTX * ctx, unsigned char * out, size_t * outl, size_t outsize);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,EVP_MAC_finalXOF,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LHA(unsigned char *, out, A1),
+    AROS_LHA(size_t, outsize, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_finalXOF, EVP_MAC_CTX * ctx, unsigned char * out, size_t outsize);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,EVP_MAC_init,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LHA(const unsigned char *, key, A1),
+    AROS_LHA(size_t, keylen, D0),
+    AROS_LHA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_init, EVP_MAC_CTX * ctx, const unsigned char * key, size_t keylen, const OSSL_PARAM * params);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,EVP_MAC_update,
+    AROS_LHA(EVP_MAC_CTX *, ctx, A0),
+    AROS_LHA(const unsigned char *, data, A1),
+    AROS_LHA(size_t, datalen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_MAC_update, EVP_MAC_CTX * ctx, const unsigned char * data, size_t datalen);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,EVP_PKEY_digestsign_supports_digest,
+    AROS_LHA(EVP_PKEY *, pkey, A0),
+    AROS_LHA(OSSL_LIB_CTX *, libctx, A1),
+    AROS_LHA(const char *, name, A2),
+    AROS_LHA(const char *, propq, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_PKEY_digestsign_supports_digest, EVP_PKEY * pkey, OSSL_LIB_CTX * libctx, const char * name, const char * propq);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EVP_PKEY_get1_encoded_public_key,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,EVP_PKEY_set1_encoded_public_key,
+    AROS_LHA(EVP_PKEY *, pkey, A0),
+    AROS_LHA(const unsigned char *, pub, A1),
+    AROS_LHA(size_t, publen, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_PKEY_set1_encoded_public_key, EVP_PKEY * pkey, const unsigned char * pub, size_t publen);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,EVP_Q_mac,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,OPENSSL_LH_flush,
+    AROS_LHA(OPENSSL_LHASH *, lh, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OPENSSL_LH_flush, OPENSSL_LHASH * lh);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_version_build_metadata,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_version_major,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_version_minor,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_version_patch,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_version_pre_release,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_default_cipher_list,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_default_ciphersuites,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_EC_curve_nid2name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH9(LONG,OSSL_HTTP_parse_url,
+    AROS_LHA(const char *, url, A0),
+    AROS_LHA(int *, pssl, A1),
+    AROS_LHA(char **, puser, A2),
+    AROS_LHA(char **, phost, A3),
+    AROS_LHA(char **, pport, D0),
+    AROS_LHA(int *, pport_num, D1),
+    AROS_LHA(char **, ppath, D2),
+    AROS_LHA(char **, pquery, D3),
+    AROS_LHA(char **, pfrag, D4),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_HTTP_parse_url, const char * url, int * pssl, char ** puser, char ** phost, char ** pport, int * pport_num, char ** ppath, char ** pquery, char ** pfrag);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,OSSL_HTTP_REQ_CTX_exchange,
+    AROS_LHA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_HTTP_REQ_CTX_exchange, OSSL_HTTP_REQ_CTX * rctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(APTR,OSSL_HTTP_REQ_CTX_new,
+    AROS_LHA(BIO *, wbio, A0),
+    AROS_LHA(BIO *, rbio, A1),
+    AROS_LHA(int, buf_size, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_HTTP_REQ_CTX_new, BIO * wbio, BIO * rbio, int buf_size);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(LONG,OSSL_HTTP_REQ_CTX_set1_req,
+    AROS_LHA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    AROS_LHA(const char *, content_type, A1),
+    AROS_LHA(const ASN1_ITEM *, it, A2),
+    AROS_LHA(const ASN1_VALUE *, req, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_HTTP_REQ_CTX_set1_req, OSSL_HTTP_REQ_CTX * rctx, const char * content_type, const ASN1_ITEM * it, const ASN1_VALUE * req);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH5(LONG,OSSL_HTTP_REQ_CTX_set_request_line,
+    AROS_LHA(OSSL_HTTP_REQ_CTX *, rctx, A0),
+    AROS_LHA(int, method_POST, D0),
+    AROS_LHA(const char *, server, A1),
+    AROS_LHA(const char *, port, A2),
+    AROS_LHA(const char *, path, A3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_HTTP_REQ_CTX_set_request_line, OSSL_HTTP_REQ_CTX * rctx, int method_POST, const char * server, const char * port, const char * path);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,OSSL_LIB_CTX_free,
+    AROS_LHA(OSSL_LIB_CTX *, a, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_LIB_CTX_free, OSSL_LIB_CTX * a);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(APTR,OSSL_LIB_CTX_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(OSSL_LIB_CTX_new);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_trace_get_category_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(LONG,OSSL_trace_get_category_num,
+    AROS_LHA(const char *, name, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_trace_get_category_num, const char * name);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,OSSL_trace_set_callback,
+    AROS_LHA(int, category, D0),
+    AROS_LHA(OSSL_trace_cb, callback, A0),
+    AROS_LHA(void *, data, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_trace_set_callback, int category, OSSL_trace_cb callback, void * data);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,OSSL_trace_set_channel,
+    AROS_LHA(int, category, D0),
+    AROS_LHA(BIO*, channel, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_trace_set_channel, int category, BIO* channel);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,OSSL_trace_set_prefix,
+    AROS_LHA(int, category, D0),
+    AROS_LHA(const char *, prefix, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_trace_set_prefix, int category, const char * prefix);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,OSSL_trace_set_suffix,
+    AROS_LHA(int, category, D0),
+    AROS_LHA(const char *, suffix, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_trace_set_suffix, int category, const char * suffix);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,SRP_user_pwd_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,SRP_user_pwd_set0_sv,
+    AROS_LHA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LHA(BIGNUM *, s, A1),
+    AROS_LHA(BIGNUM *, v, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SRP_user_pwd_set0_sv, SRP_user_pwd * user_pwd, BIGNUM * s, BIGNUM * v);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,SRP_user_pwd_set1_ids,
+    AROS_LHA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LHA(const char *, id, A1),
+    AROS_LHA(const char *, info, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SRP_user_pwd_set1_ids, SRP_user_pwd * user_pwd, const char * id, const char * info);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(void,SRP_user_pwd_set_gN,
+    AROS_LHA(SRP_user_pwd *, user_pwd, A0),
+    AROS_LHA(const BIGNUM *, g, A1),
+    AROS_LHA(const BIGNUM *, N, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SRP_user_pwd_set_gN, SRP_user_pwd * user_pwd, const BIGNUM * g, const BIGNUM * N);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SRP_VBASE_add0_user,
+    AROS_LHA(SRP_VBASE *, vb, A0),
+    AROS_LHA(SRP_user_pwd *, user_pwd, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SRP_VBASE_add0_user, SRP_VBASE * vb, SRP_user_pwd * user_pwd);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_add_store_cert_subjects_to_stack,
+    AROS_LHA(STACK_OF(X509_NAME, ___SSL_add_store_cert_subjects_to_stack_0, A0),
+    AROS_LHA(const char *, uri, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_add_store_cert_subjects_to_stack, STACK_OF(X509_NAME, const char * uri);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_load_verify_dir,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(const char *, CApath, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_load_verify_dir, SSL_CTX * ctx, const char * CApath);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_load_verify_file,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(const char *, CAfile, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_load_verify_file, SSL_CTX * ctx, const char * CAfile);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_load_verify_store,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(const char *, CAstore, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_load_verify_store, SSL_CTX * ctx, const char * CAstore);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,SSL_CTX_new_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_set0_tmp_dh_pkey,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(EVP_PKEY *, dhpkey, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_set0_tmp_dh_pkey, SSL_CTX * ctx, EVP_PKEY * dhpkey);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_set_async_callback,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(SSL_async_callback_fn, callback, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_set_async_callback, SSL_CTX * ctx, SSL_async_callback_fn callback);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_set_async_callback_arg,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(void *, arg, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_set_async_callback_arg, SSL_CTX * ctx, void * arg);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(LONG,SSL_CTX_set_default_verify_store,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_set_default_verify_store, SSL_CTX * ctx);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_CTX_set_tlsext_ticket_key_evp_cb,
+    AROS_LHA(SSL_CTX *, ctx, A0),
+    AROS_LHA(int, (*fp, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_CTX_set_tlsext_ticket_key_evp_cb, SSL_CTX * ctx, int (*fp);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,SSL_get0_peer_certificate,
+    AROS_LHA(const SSL *, s, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_get0_peer_certificate, const SSL * s);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_get_async_status,
+    AROS_LHA(SSL *, s, A0),
+    AROS_LHA(int *, status, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_get_async_status, SSL * s, int * status);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,SSL_group_to_name,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,SSL_load_client_CA_file_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(LONG,SSL_new_session_ticket,
+    AROS_LHA(SSL *, s, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_new_session_ticket, SSL * s);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH5(LONG,SSL_sendfile,
+    AROS_LHA(SSL *, s, A0),
+    AROS_LHA(int, fd, D0),
+    AROS_LHA(off_t, offset, D1),
+    AROS_LHA(size_t, size, D2),
+    AROS_LHA(int, flags, D3),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_sendfile, SSL * s, int fd, off_t offset, size_t size, int flags);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_set0_tmp_dh_pkey,
+    AROS_LHA(SSL *, s, A0),
+    AROS_LHA(EVP_PKEY *, dhpkey, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_set0_tmp_dh_pkey, SSL * s, EVP_PKEY * dhpkey);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_set_async_callback,
+    AROS_LHA(SSL *, s, A0),
+    AROS_LHA(SSL_async_callback_fn, callback, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_set_async_callback, SSL * s, SSL_async_callback_fn callback);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,SSL_set_async_callback_arg,
+    AROS_LHA(SSL *, s, A0),
+    AROS_LHA(void *, arg, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(SSL_set_async_callback_arg, SSL * s, void * arg);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,TS_VERIFY_CTX_set_certs,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,UI_read_string_lib,
+    AROS_LHA(UI *, ui, A0),
+    AROS_LHA(UI_STRING *, uis, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(UI_read_string_lib, UI * ui, UI_STRING * uis);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,UI_write_string_lib,
+    AROS_LHA(UI *, ui, A0),
+    AROS_LHA(UI_STRING *, uis, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(UI_write_string_lib, UI * ui, UI_STRING * uis);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,X509_CRL_load_http,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(APTR,X509_load_http,
+    AROS_LHA(const char *, url, A0),
+    AROS_LHA(BIO *, bio, A1),
+    AROS_LHA(BIO *, rbio, A2),
+    AROS_LHA(int, timeout, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(X509_load_http, const char * url, BIO * bio, BIO * rbio, int timeout);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,X509_NAME_hash_ex,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(APTR,d2i_OSSL_AA_DIST_POINT,
+    AROS_LHA(OSSL_AA_DIST_POINT **, a, A0),
+    AROS_LHA(const unsigned char **, in, A1),
+    AROS_LHA(long, len, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(d2i_OSSL_AA_DIST_POINT, OSSL_AA_DIST_POINT ** a, const unsigned char ** in, long len);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,i2d_OSSL_AA_DIST_POINT,
+    AROS_LHA(const OSSL_AA_DIST_POINT *, a, A0),
+    AROS_LHA(unsigned char **, out, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(i2d_OSSL_AA_DIST_POINT, const OSSL_AA_DIST_POINT * a, unsigned char ** out);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(void,OSSL_AA_DIST_POINT_free,
+    AROS_LHA(OSSL_AA_DIST_POINT *, a, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_AA_DIST_POINT_free, OSSL_AA_DIST_POINT * a);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(APTR,OSSL_AA_DIST_POINT_new,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(OSSL_AA_DIST_POINT_new);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_AA_DIST_POINT_it,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH10(LONG,PEM_ASN1_write_bio_ctx,
+    AROS_LHA(OSSL_i2d_of_void_ctx *, i2d, A0),
+    AROS_LHA(void *, vctx, A1),
+    AROS_LHA(const char *, name, A2),
+    AROS_LHA(BIO *, bp, A3),
+    AROS_LHA(const void *, x, D0),
+    AROS_LHA(const EVP_CIPHER *, enc, D1),
+    AROS_LHA(const unsigned char *, kstr, D2),
+    AROS_LHA(int, klen, D3),
+    AROS_LHA(pem_password_cb *, cb, D4),
+    AROS_LHA(void *, u, D5),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(PEM_ASN1_write_bio_ctx, OSSL_i2d_of_void_ctx * i2d, void * vctx, const char * name, BIO * bp, const void * x, const EVP_CIPHER * enc, const unsigned char * kstr, int klen, pem_password_cb * cb, void * u);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(LONG,EVP_PKEY_get_security_category,
+    AROS_LHA(const EVP_PKEY *, pkey, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_PKEY_get_security_category, const EVP_PKEY * pkey);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(void,X509_STORE_CTX_set_ocsp_resp,
+    AROS_LHA(X509_STORE_CTX *, ctx, A0),
+    AROS_LHA(STACK_OF(OCSP_RESPONSE, ___X509_STORE_CTX_set_ocsp_resp_1, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(X509_STORE_CTX_set_ocsp_resp, X509_STORE_CTX * ctx, STACK_OF(OCSP_RESPONSE);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OPENSSL_sk_set_thunks,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,i2d_PKCS8PrivateKey,
+    AROS_LHA(const EVP_PKEY *, a, A0),
+    AROS_LHA(unsigned char **, pp, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(i2d_PKCS8PrivateKey, const EVP_PKEY * a, unsigned char ** pp);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,OSSL_PARAM_set_octet_string_or_ptr,
+    AROS_LHA(OSSL_PARAM *, p, A0),
+    AROS_LHA(const void *, val, A1),
+    AROS_LHA(size_t, len, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(OSSL_PARAM_set_octet_string_or_ptr, OSSL_PARAM * p, const void * val, size_t len);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,OSSL_STORE_LOADER_settable_ctx_params,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,X509_CRL_get0_tbs_sigalg,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,CMS_RecipientInfo_kemri_cert_cmp,
+    AROS_LHA(CMS_RecipientInfo *, ri, A0),
+    AROS_LHA(X509 *, cert, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(CMS_RecipientInfo_kemri_cert_cmp, CMS_RecipientInfo * ri, X509 * cert);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH2(LONG,CMS_RecipientInfo_kemri_set0_pkey,
+    AROS_LHA(CMS_RecipientInfo *, ri, A0),
+    AROS_LHA(EVP_PKEY *, pk, A1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(CMS_RecipientInfo_kemri_set0_pkey, CMS_RecipientInfo * ri, EVP_PKEY * pk);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH1(APTR,CMS_RecipientInfo_kemri_get0_ctx,
+    AROS_LHA(CMS_RecipientInfo *, ri, A0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(CMS_RecipientInfo_kemri_get0_ctx, CMS_RecipientInfo * ri);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CMS_RecipientInfo_kemri_get0_kdf_alg,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,CMS_RecipientInfo_kemri_set_ukm,
+    AROS_LHA(CMS_RecipientInfo *, ri, A0),
+    AROS_LHA(const unsigned char *, ukm, A1),
+    AROS_LHA(int, ukmLength, D0),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(CMS_RecipientInfo_kemri_set_ukm, CMS_RecipientInfo * ri, const unsigned char * ukm, int ukmLength);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH6(APTR,EVP_PKEY_derive_SKEY,
+    AROS_LHA(EVP_PKEY_CTX *, ctx, A0),
+    AROS_LHA(EVP_SKEYMGMT *, mgmt, A1),
+    AROS_LHA(const char *, key_type, A2),
+    AROS_LHA(const char *, propquery, A3),
+    AROS_LHA(size_t, keylen, D0),
+    AROS_LHA(const OSSL_PARAM *, params, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_PKEY_derive_SKEY, EVP_PKEY_CTX * ctx, EVP_SKEYMGMT * mgmt, const char * key_type, const char * propquery, size_t keylen, const OSSL_PARAM * params);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH3(LONG,EVP_KDF_CTX_set_SKEY,
+    AROS_LHA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LHA(EVP_SKEY *, key, A1),
+    AROS_LHA(const char *, paramname, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_KDF_CTX_set_SKEY, EVP_KDF_CTX * ctx, EVP_SKEY * key, const char * paramname);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH6(APTR,EVP_KDF_derive_SKEY,
+    AROS_LHA(EVP_KDF_CTX *, ctx, A0),
+    AROS_LHA(EVP_SKEYMGMT *, mgmt, A1),
+    AROS_LHA(const char *, key_type, A2),
+    AROS_LHA(const char *, propquery, A3),
+    AROS_LHA(size_t, keylen, D0),
+    AROS_LHA(const OSSL_PARAM *, params, D1),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_KDF_derive_SKEY, EVP_KDF_CTX * ctx, EVP_SKEYMGMT * mgmt, const char * key_type, const char * propquery, size_t keylen, const OSSL_PARAM * params);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH4(APTR,EVP_SKEY_import_SKEYMGMT,
+    AROS_LHA(OSSL_LIB_CTX *, libctx, A0),
+    AROS_LHA(EVP_SKEYMGMT *, skeymgmt, A1),
+    AROS_LHA(int, selection, D0),
+    AROS_LHA(const OSSL_PARAM *, params, A2),
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC(EVP_SKEY_import_SKEYMGMT, OSSL_LIB_CTX * libctx, EVP_SKEYMGMT * skeymgmt, int selection, const OSSL_PARAM * params);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_malloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_calloc,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_aligned_alloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_realloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_clear_realloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_secure_malloc_array,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+
+AROS_LH0(LONG,CRYPTO_secure_calloc,
+    struct Library *, __BASE_OR_IFACE_VAR, 0, LIBSTUB)
+{
+    AROS_LIBFUNC_INIT
+    return CALL_LFUNC_NP(UNIMPLEMENTED);
+    AROS_LIBFUNC_EXIT
+}
+

@@ -1,0 +1,85 @@
+CONTINUE FROM LAST SESSION — July 2, 2026
+=============================================
+
+ISSUE: AmiSSL 5.27 AROS x86_64 — httpget crashes/hangs on real AROS
+=====================================================================
+
+FIXES APPLIED THIS SESSION
+===========================
+
+1. gettimeofday.c (libcmt)
+   - Added NULL guard for state pointer before OpenTimer call
+   - Added gettimeofday.o to aros-x86_64 LIBOBJS in libcmt/Makefile
+   - Prevents crash when GetAmiSSLState() returns NULL
+   - File: libcmt/gettimeofday.c
+
+2. getenv.c (libcmt)
+   - Added NULL guard for state pointer before accessing state->getenv_var
+   - Added getenv.o to aros-x86_64 LIBOBJS in libcmt/Makefile
+   - Prevents crash when GetAmiSSLState() returns NULL during InitAmiSSLA
+   - File: libcmt/getenv.c
+
+3. init.c (openssl/crypto)
+   - REVERTED: OSSL_PROVIDER_load(NULL, "default") was REMOVED from ossl_init_base()
+   - Original fix was added in earlier session but caused crash on real AROS during OpenLibrary
+   - File: openssl/crypto/init.c
+
+4. amissl_library.c (src)
+   - Added OSSL_PROVIDER_load(NULL, "default") in InitAmiSSLA() instead (runs at InitAmiSSLA time, not OpenLibrary time)
+   - Added extern struct Library *SocketBase; and set it to state->SocketBase
+   - This makes AROS socket macros (gethostbyname, etc.) work inside the library
+   - Added #include <openssl/provider.h>
+   - File: src/amissl_library.c
+
+5. bio_sock2.c (openssl/crypto/bio)
+   - Added (struct sockaddr*) cast around BIO_ADDR_sockaddr(addr) in BIO_connect() for AROS
+   - Matches AmiSSL 4.12 working version
+   - File: openssl/crypto/bio/bio_sock2.c
+
+6. bss_conn.c (openssl/crypto/bio)
+   - Removed BIO_socket_wait() with zero timeout from BIO_CONN_S_BLOCKED_CONNECT handler
+   - The BIO_socket_wait(b->num, 0, time(NULL)) with deadline=now always timed out immediately
+   - This caused an infinite loop in the non-blocking connect state machine
+   - Reverted to AmiSSL 4.12 behavior (direct BIO_sock_error check)
+   - File: openssl/crypto/bio/bss_conn.c
+
+7. bio_local.h (openssl/crypto/bio)
+   - Added #undef AI_PASSIVE for __AROS__ (forces fallback gethostbyname path instead of getaddrinfo)
+   - Restored from AmiSSL 4.12 working version
+   - File: openssl/crypto/bio/bio_local.h
+
+8. httpget.c (test)
+   - Increased __stack from 256*1024 to 1024*1024 (1MB stack)
+   - File: test/httpget.c
+
+9. libcmt/Makefile
+   - Added gettimeofday.o to aros-x86_64 LIBOBJS
+   - Added getenv.o to aros-x86_64 LIBOBJS
+   - File: libcmt/Makefile
+
+10. amissl_missing_stubs.c (src/aros)
+    - Added struct Library *SocketBase = NULL; definition (was extern only)
+    - Restructured file slightly
+    - File: src/aros/amissl_missing_stubs.c
+
+CURRENT STATUS (as of end of session)
+=======================================
+- Hosted AROS: httpget runs through OpenLibrary, InitAmiSSLA, SSL_CTX_new, all BIO tests
+  then hangs at BIO_do_connect (known bsdsocket.library forwarder connect() bug)
+- Real AROS: Still crashes at [I3] Opening amissl_v362.library — root cause not yet identified
+
+NOTES FOR RESUME
+==================
+- The working configuration that got past OpenLibrary on real AROS had:
+  - getenv.c in libcmt build (original code + NULL state guard)
+  - OSSL_PROVIDER_load in amissl_library.c (not in init.c)
+  - SocketBase assignment in amissl_library.c
+- The current build's test_output.txt on hosted showed everything working up to BIO_do_connect
+
+KNOWN REMAINING ISSUES
+=======================
+1. Real AROS: OpenLibrary crash at [I3] — possibly symbol conflict or missing function
+2. Hosted AROS: BIO_do_connect hangs — bsdsocket.library forwarder connect() bug
+3. Real AROS: Stack overflow in memset (crash_log_1.txt) — 1MB stack may still be insufficient
+4. BIO_lookup_ex NULL function pointer (crash_log_3.txt) — SocketBase fix should help but untested
+5. SSL_do_handshake hangs — OpenSSL 3.x state machine issue (after connect succeeds)

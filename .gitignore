@@ -1,0 +1,14 @@
+build_aros-x86_64/
+build_*/
+release/
+media/
+archived_build/
+amissl-4.12-inProgress/
+*.o
+*.a
+*.library
+*.map
+*.dump
+*.gch
+core
+*.bak
