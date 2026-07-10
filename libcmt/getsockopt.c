@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -19,7 +21,11 @@ int (getsockopt)(int sockfd, int level, int optname, void *optval, socklen_t *op
 LONG (getsockopt)(LONG sockfd, LONG level, LONG optname, void *optval, LONG *optlen)
 #endif
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return getsockopt(sockfd, level, optname, optval, optlen);
+  else return -1;
+#elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->getsockopt(sockfd, level, optname, optval, optlen);
   else return -1;

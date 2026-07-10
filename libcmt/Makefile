@@ -270,6 +270,25 @@ LIBOBJS = $(BUILD_D)/threadhash.o \
           $(BUILD_D)/vsnprintfa.o \
           $(BUILD_D)/libcmt.o \
           $(BUILD_D)/socket.o \
+          $(BUILD_D)/send.o \
+          $(BUILD_D)/recv.o \
+          $(BUILD_D)/connect.o \
+          $(BUILD_D)/closesocket.o \
+          $(BUILD_D)/shutdown.o \
+          $(BUILD_D)/bind.o \
+          $(BUILD_D)/listen.o \
+          $(BUILD_D)/accept.o \
+          $(BUILD_D)/getsockname.o \
+          $(BUILD_D)/getpeername.o \
+          $(BUILD_D)/getsockopt.o \
+          $(BUILD_D)/setsockopt.o \
+          $(BUILD_D)/ioctlsocket.o \
+          $(BUILD_D)/select.o \
+          $(BUILD_D)/gethostbyname.o \
+          $(BUILD_D)/getservbyname.o \
+          $(BUILD_D)/inet_ntoa.o \
+          $(BUILD_D)/sendto.o \
+          $(BUILD_D)/recvfrom.o \
           $(BUILD_D)/timer.o \
           $(BUILD_D)/error.o \
           $(BUILD_D)/malloc.o \

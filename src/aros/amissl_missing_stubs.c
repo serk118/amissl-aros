@@ -91,6 +91,67 @@ int LIB_ossl_crypto_thread_native_perform_join(struct Library * _base, void * __
     return 0; /* single-threaded: no-op */
 }
 
+/* Override CRYPTO_malloc/CRYPTO_free/CRYPTO_zalloc/CRYPTO_realloc with
+ * AllocVec/FreeVec. These override the AUTOINIT dispatch stubs from
+ * amissl_stubs_aros.c because this .o is placed first in the link order
+ * (GNU ld's --allow-multiple-definition uses the FIRST definition). */
+void *(CRYPTO_malloc)(size_t num, const char *file, int line)
+{
+    (void)file; (void)line;
+    return AllocVec(num, MEMF_ANY);
+}
+
+void (CRYPTO_free)(void *ptr, const char *file, int line)
+{
+    (void)file; (void)line;
+    FreeVec(ptr);
+}
+
+void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
+{
+    void *p = AllocVec(num, MEMF_ANY);
+    if (p != NULL) {
+        unsigned char *cp = (unsigned char *)p;
+        size_t n;
+        for (n = 0; n < num; n++) cp[n] = 0;
+    }
+    return p;
+}
+
+void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
+{
+    (void)file; (void)line;
+    if (addr == NULL) return AllocVec(num, MEMF_ANY);
+    if (num == 0) { FreeVec(addr); return NULL; }
+    void *p = AllocVec(num, MEMF_ANY);
+    if (p == NULL) return NULL;
+    unsigned char *src = (unsigned char *)addr;
+    unsigned char *dst = (unsigned char *)p;
+    size_t i;
+    for (i = 0; i < num; i++) dst[i] = src[i];
+    FreeVec(addr);
+    return p;
+}
+
+/* Strong alias for SocketBase — used by libcmt GETSOCKET() fallback */
+struct Library *__amissl_global_SocketBase = NULL;
+
+/* Override socket stubs from amissl_stubs_aros.c (which always return -1).
+   Compile without AMISSL_COMPILE so proto/bsdsocket.h works properly.
+   The function body calls through the AROS inline macro which dispatches
+   through SocketBase. */
+#include <proto/bsdsocket.h>
+int send(int s, const void *buf, int len, int flags) { if(!SocketBase)return -1;return send(s,buf,len,flags); }
+int recv(int s, void *buf, int len, int flags) { if(!SocketBase)return -1;return recv(s,buf,len,flags); }
+int connect(int s, const struct sockaddr *addr, int addrlen) { if(!SocketBase)return -1;return connect(s,addr,addrlen); }
+int socket(int domain, int type, int protocol) { if(!SocketBase)return -1;return socket(domain,type,protocol); }
+int bind(int s, const struct sockaddr *addr, int addrlen) { if(!SocketBase)return -1;return bind(s,addr,addrlen); }
+int listen(int s, int backlog) { if(!SocketBase)return -1;return listen(s,backlog); }
+int closesocket(int s) { if(!SocketBase)return -1;return closesocket(s); }
+int shutdown(int s, int how) { if(!SocketBase)return -1;return shutdown(s,how); }
+int setsockopt(int s, int l, int n, const void *v, int o) { if(!SocketBase)return -1;return setsockopt(s,l,n,v,o); }
+int getsockopt(int s, int l, int n, void *v, int *o) { if(!SocketBase)return -1;return getsockopt(s,l,n,v,o); }
+
 /* SocketBase is provided by the AROS bsdsocket.library stub system.
  * Do NOT define it here — let the linker resolve it from -lamiga or -larossupport.
  * InitAmiSSLA will set it via the AmiSSL_SocketBase tag. */

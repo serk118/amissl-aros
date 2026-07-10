@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -19,7 +21,11 @@ int (shutdown)(int sockfd, int how)
 LONG (shutdown)(LONG sockfd, LONG how)
 #endif
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return shutdown(sockfd, how);
+  else return -1;
+#elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->shutdown(sockfd, how);
   else return -1;

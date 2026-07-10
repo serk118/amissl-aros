@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -15,7 +17,11 @@
 
 char *(inet_ntoa)(struct in_addr in)
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return inet_ntoa(in);
+  else return NULL;
+#elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->Inet_NtoA(in.s_addr);
   else return NULL;

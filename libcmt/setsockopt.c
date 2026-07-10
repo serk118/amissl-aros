@@ -3,31 +3,37 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+int (setsockopt)(int sockfd, int level, int optname, void *optval, socklen_t optlen)
+{
+  GETSOCKET();
+  if(SocketBase) return setsockopt(sockfd, level, optname, optval, optlen);
+  else return -1;
+}
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
+int (setsockopt)(int sockfd, int level, int optname, const void *optval, socklen_t optlen)
+{
+  GETISOCKET();
+  if(ISocket) return ISocket->setsockopt(sockfd, level, optname, (void *)optval, optlen);
+  else return -1;
+}
+#elif defined(__MORPHOS__)
+LONG (setsockopt)(LONG sockfd, LONG level, LONG optname, const void *optval, LONG optlen)
+{
+  GETSOCKET();
+  if(SocketBase) return setsockopt(sockfd, level, optname, optval, optlen);
+  else return -1;
+}
 #else
 #define AMITCP_NEW_NAMES
 #include <errno.h>
 #include "multitcp.h"
 #include <internal/amissl.h>
-#endif
-
-#if !defined(__MORPHOS__)
 int (setsockopt)(int sockfd, int level, int optname, const void *optval, socklen_t optlen)
-#else
-LONG (setsockopt)(LONG sockfd, LONG level, LONG optname, const void *optval, LONG optlen)
-#endif
 {
-#ifdef __amigaos4__
-  GETISOCKET();
-  if(ISocket) return ISocket->setsockopt(sockfd, level, optname, (void *)optval, optlen);
-  else return -1;
-#elif __MORPHOS__
-  GETSOCKET();
-  if(SocketBase) return setsockopt(sockfd, level, optname, optval, optlen);
-  else return -1;
-#else
 	GETSTATE();
 
 	if (state->SocketBase)
@@ -50,5 +56,5 @@ LONG (setsockopt)(LONG sockfd, LONG level, LONG optname, const void *optval, LON
 	}
 
 	return(-1);
-#endif
 }
+#endif

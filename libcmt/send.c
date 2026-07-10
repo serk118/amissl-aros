@@ -3,31 +3,38 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+int (send)(int sockfd, const void *buf, int len, int flags)
+{
+  extern struct Library *SocketBase;
+  if(SocketBase) return send(sockfd, buf, len, flags);
+  else return -1;
+}
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
+ssize_t (send)(int sockfd, const void *buf, size_t len, int flags)
+{
+  GETISOCKET();
+  if(ISocket) return ISocket->send(sockfd, (void *)buf, len, flags);
+  else return -1;
+}
+#elif defined(__MORPHOS__)
+LONG (send)(LONG sockfd, const UBYTE *buf, LONG len, LONG flags)
+{
+  GETSOCKET();
+  if(SocketBase) return send(sockfd, buf, len, flags);
+  else return -1;
+}
 #else
 #define AMITCP_NEW_NAMES
 #include <errno.h>
 #include "multitcp.h"
 #include <internal/amissl.h>
-#endif
 
-#if !defined(__MORPHOS__)
 ssize_t (send)(int sockfd, const void *buf, size_t len, int flags)
-#else
-LONG (send)(LONG sockfd, const UBYTE *buf, LONG len, LONG flags)
-#endif
 {
-#ifdef __amigaos4__
-  GETISOCKET();
-  if(ISocket) return ISocket->send(sockfd, (void *)buf, len, flags);
-  else return -1;
-#elif __MORPHOS__
-  GETSOCKET();
-  if(SocketBase) return send(sockfd, buf, len, flags);
-  else return -1;
-#else
 	GETSTATE();
 
 	if (state->SocketBase)
@@ -50,5 +57,5 @@ LONG (send)(LONG sockfd, const UBYTE *buf, LONG len, LONG flags)
 	}
 
 	return(-1);
-#endif
 }
+#endif

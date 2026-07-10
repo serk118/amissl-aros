@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -15,7 +17,11 @@
 
 int ioctlsocket(int sockfd, long request, char *arg)
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return IoctlSocket(sockfd, request, arg);
+  else return -1;
+#elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->IoctlSocket(sockfd, request, arg);
   else return -1;

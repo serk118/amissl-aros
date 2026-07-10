@@ -462,6 +462,7 @@ APPS =  $(BUILD_D)/amisslmaster_test $(BUILD_D)/amissl_v$(VERSIONNAME)_test \
         $(BUILD_D)/https $(BUILD_D)/httpget $(BUILD_D)/run_all_tests \
         $(BUILD_D)/amissl_simple_test $(BUILD_D)/tcp_test \
         $(BUILD_D)/simple_bsd
+APPS += $(BUILD_D)/httpget_simple
 ifneq ($(OS), aros-x86_64)
 APPS += $(BUILD_D)/uitest $(BUILD_D)/vatest
 endif
@@ -560,8 +561,8 @@ $(BUILD_D)/amissl_v$(VERSIONNAME).library: $(LIBOBJS) $(LIBCMT) $(LIBSSL) $(LIBC
 	@echo "  LD $@"
 ifeq ($(OS), aros-x86_64)
 	@echo "  (AROS x86_64: direct link with stubs)"
-	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c -o $(BUILD_D)/amissl_missing_stubs.o $(SRC_D)/aros/amissl_missing_stubs.c 2>/dev/null || true
-	$(CC) -o $@ $(LDFLAGS) $(LIBOBJS) $(BUILD_D)/amissl_missing_stubs.o $(LIBS) $(LDLIBS) $(LIBS) 2>/dev/null && \
+	$(CC) $(APPCFLAGS) -I./include/netinclude -I./openssl/crypto/include -I./openssl -I./openssl/include -c -o $(BUILD_D)/amissl_missing_stubs.o $(SRC_D)/aros/amissl_missing_stubs.c 2>/dev/null || true
+	$(CC) -o $@ $(LDFLAGS) $(BUILD_D)/amissl_missing_stubs.o $(LIBS) $(LIBOBJS) $(LDLIBS) $(LIBS) 2>/dev/null && \
 	python3 -c "import sys;f=open(sys.argv[1],'r+b');f.seek(7);f.write(b'\x0f\x0b');f.close()" "$@" 2>/dev/null; :
 else
 	@rm -rf $(BUILD_D)/.amissl_merge_objs
@@ -659,6 +660,10 @@ $(BUILD_D)/https: $(TEST_D)/https.c
 $(BUILD_D)/httpget: $(TEST_D)/httpget.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=262144
+
+$(BUILD_D)/httpget_simple: $(TEST_D)/httpget_simple.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 
 $(BUILD_D)/ssltest_diag: $(TEST_D)/ssltest_diag.c
 	@echo "  CC/LD $@"

@@ -3,58 +3,58 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+struct servent *(getservbyname)(char *name, char *proto)
+{
+  GETSOCKET();
+  if(SocketBase) return getservbyname(name, proto);
+  else return NULL;
+}
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
+struct servent *(getservbyname)(const char *name, const char *proto)
+{
+  GETISOCKET_NOERRNO();
+  if(ISocket) return ISocket->getservbyname((char *)name, (char *)proto);
+  else return NULL;
+}
+#elif defined(__MORPHOS__)
+struct servent *(getservbyname)(const UBYTE *name, const UBYTE *proto)
+{
+  GETSOCKET();
+  if(SocketBase) return getservbyname(name, proto);
+  else return NULL;
+}
 #else
 #define AMITCP_NEW_NAMES
 #include <errno.h>
 #include "multitcp.h"
 #include <internal/amissl.h>
-#endif
-
-#if !defined(__MORPHOS__)
 struct servent *(getservbyname)(const char *name, const char *proto)
-#else
-struct servent *(getservbyname)(const UBYTE *name, const UBYTE *proto)
-#endif
 {
-#ifdef __amigaos4__
-  GETISOCKET_NOERRNO(); // openssl does not care about the error code for getservbyname
-  if(ISocket) return ISocket->getservbyname((char *)name, (char *)proto);
-  else return NULL;
-#elif __MORPHOS__
-  GETSOCKET();
-  if(SocketBase) return getservbyname(name, proto);
-  else return NULL;
-#else
 	GETSTATE();
 
 	if (state->SocketBase)
 	{
 		switch(state->TCPIPStackType)
 		{
-			case TCPIP_MLink:{
-				struct servent *res;
-				ObtainSemaphore(&state->MLinkLock->Semaphore);
-				res=amitcp_GetServByName(name, proto);
-				ReleaseSemaphore(&state->MLinkLock->Semaphore);
-				return res;
-				break;}
 			case TCPIP_Roadshow:
 			case TCPIP_Miami:
 			case TCPIP_AmiTCP:
+			case TCPIP_MLink:
 				return amitcp_GetServByName(name, proto);
 				break;
 			case TCPIP_IN225:
 				return in225_getservbyname(name, proto);
 				break;
 			case TCPIP_Termite:
-				return termite_getservbyname((char *)name, (char *)proto);
+				return termite_getservbyname(name, proto);
 				break;
 		}
 	}
 
 	return(NULL);
-#endif
 }
+#endif

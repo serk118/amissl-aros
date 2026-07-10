@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -19,7 +21,11 @@ struct hostent *(gethostbyname)(const char *name)
 struct hostent *(gethostbyname)(const UBYTE *name)
 #endif
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return gethostbyname(name);
+  else return NULL;
+#elif defined(__amigaos4__)
   GETISOCKET_NOERRNO(); // h_errno isn't used by openssl
   if(ISocket) return ISocket->gethostbyname((char *)name);
   else return NULL;

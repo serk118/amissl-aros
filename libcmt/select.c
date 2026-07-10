@@ -3,7 +3,9 @@
 
 #include "libcmt.h"
 
-#ifdef __amigaos4__
+#if defined(__AROS__)
+#include <proto/bsdsocket.h>
+#elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
 #else
@@ -19,7 +21,11 @@ int (select)(int numsocks, fd_set *readsocks, fd_set *writesocks, fd_set *except
 LONG (select)(LONG numsocks, fd_set *readsocks, fd_set *writesocks, fd_set *exceptsocks, struct timeval *timeout)
 #endif
 {
-#ifdef __amigaos4__
+#if defined(__AROS__)
+  GETSOCKET();
+  if(SocketBase) return WaitSelect(numsocks, readsocks, writesocks, exceptsocks, timeout, NULL);
+  else return -1;
+#elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->WaitSelect(numsocks, readsocks, writesocks, exceptsocks, timeout, NULL);
   else return -1;

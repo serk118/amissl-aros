@@ -352,9 +352,29 @@ static info_cb get_callback(SSL_CONNECTION *s)
  *   1: Success
  * <=0: NBIO or error
  */
-/* Debug helpers - write to stdout via Linux syscalls */
-#define DBG_P(str) do {} while(0)
-#define DBG_PV(str, val) do {} while(0)
+/* Debug helpers - raw Linux syscall to bypass AROS forwarder */
+#define SYS_write 1
+static void dbg_print(const char *s) {
+    long len = 0;
+    while (s[len]) len++;
+    __asm__ __volatile__("syscall"
+        : "=a"(len)
+        : "0"(SYS_write), "D"(1), "S"(s), "d"(len)
+        : "rcx", "r11", "memory");
+}
+static void dbg_int(int v) {
+    char b[32];
+    int i = 30;
+    b[31] = '\n';
+    if (v == 0) { b[30] = '0'; dbg_print(b+30); return; }
+    unsigned int u = v < 0 ? -v : v;
+    while (u > 0) { b[i--] = '0' + (u % 10); u /= 10; }
+    if (v < 0) b[i--] = '-';
+    dbg_print(b + i + 1);
+}
+#define DBG_P(str) dbg_print(str "\n")
+#define DBG_PV(str, val) do { dbg_print(str); dbg_int(val); } while(0)
+int _sm_step = 0;
 
 static int state_machine(SSL_CONNECTION *s, int server)
 {
@@ -366,60 +386,47 @@ static int state_machine(SSL_CONNECTION *s, int server)
     SSL *ssl = SSL_CONNECTION_GET_SSL(s);
     SSL *ussl = SSL_CONNECTION_GET_USER_SSL(s);
 
-    DBG_P("=== SM start ===\n");
-    DBG_PV("=== SM state=", st->state);
-
+    _sm_step = 1;
     if (st->state == MSG_FLOW_ERROR) {
-        DBG_P("=== SM error state ===\n");
+        _sm_step = 2;
         return -1;
     }
 
-    DBG_P("=== SM ERR_clear ===\n");
+    _sm_step = 3;
     ERR_clear_error();
     clear_sys_error();
-    DBG_P("=== SM ERR_clear OK ===\n");
+    _sm_step = 4;
 
-    DBG_P("=== SM callback ===\n");
     cb = get_callback(s);
-    DBG_P("=== SM callback OK ===\n");
+    _sm_step = 5;
 
-    DBG_P("=== SM in_handshake++ ===\n");
     st->in_handshake++;
-    DBG_P("=== SM in_handshake OK ===\n");
+    _sm_step = 6;
 
-    DBG_PV("=== SM SSL_in_init=", SSL_in_init(ssl));
-    DBG_PV("=== SM SSL_in_before=", SSL_in_before(ssl));
     if (!SSL_in_init(ssl) || SSL_in_before(ssl)) {
-        DBG_P("=== SM SSL_clear ===\n");
+        _sm_step = 7;
         if ((s->s3.flags & TLS1_FLAGS_STATELESS) == 0 && !SSL_clear(ssl))
             return -1;
-        DBG_P("=== SM SSL_clear OK ===\n");
     }
-#ifndef OPENSSL_NO_SCTP
-    if (SSL_CONNECTION_IS_DTLS(s) && BIO_dgram_is_sctp(SSL_get_wbio(ssl))) {
-        BIO_ctrl(SSL_get_wbio(ssl), BIO_CTRL_DGRAM_SCTP_SET_IN_HANDSHAKE,
-            st->in_handshake, NULL);
-    }
-#endif
+    _sm_step = 8;
 
     /* Initialise state machine */
-    DBG_PV("=== SM init state=", st->state);
     if (st->state == MSG_FLOW_UNINITED
         || st->state == MSG_FLOW_FINISHED) {
-        DBG_P("=== SM init state machine ===\n");
+        _sm_step = 9;
         if (st->state == MSG_FLOW_UNINITED) {
             st->hand_state = TLS_ST_BEFORE;
             st->request_state = TLS_ST_BEFORE;
         }
 
+        _sm_step = 10;
         s->server = server;
-        DBG_P("=== SM set server ===\n");
         if (cb != NULL) {
             if (SSL_IS_FIRST_HANDSHAKE(s) || !SSL_CONNECTION_IS_TLS13(s))
                 cb(ussl, SSL_CB_HANDSHAKE_START, 1);
         }
 
-        DBG_PV("=== SM version=", s->version);
+        _sm_step = 11;
         if (SSL_CONNECTION_IS_DTLS(s)) {
             if ((s->version & 0xff00) != (DTLS1_VERSION & 0xff00) && (server || (s->version & 0xff00) != (DTLS1_BAD_VER & 0xff00))) {
                 SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
@@ -427,63 +434,50 @@ static int state_machine(SSL_CONNECTION *s, int server)
             }
         } else {
             if ((s->version >> 8) != SSL3_VERSION_MAJOR) {
-                DBG_P("=== SM bad version ===\n");
                 SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
         }
-        DBG_P("=== SM version OK ===\n");
+        _sm_step = 12;
 
-        DBG_P("=== SM security ===\n");
         if (!ssl_security(s, SSL_SECOP_VERSION, 0, s->version, NULL)) {
-            DBG_P("=== SM security fail ===\n");
             SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
             goto end;
         }
-        DBG_P("=== SM security OK ===\n");
+        _sm_step = 13;
 
-        DBG_P("=== SM init_buf ===\n");
         if (s->init_buf == NULL) {
             if ((buf = BUF_MEM_new()) == NULL) {
-                DBG_P("=== SM BUF_MEM_new fail ===\n");
                 SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
-            DBG_P("=== SM BUF_MEM_grow ===\n");
             if (!BUF_MEM_grow(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
-                DBG_P("=== SM BUF_MEM_grow fail ===\n");
                 SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
             s->init_buf = buf;
             buf = NULL;
         }
-        DBG_P("=== SM init_buf OK ===\n");
+        _sm_step = 14;
 
         s->init_num = 0;
         s->s3.change_cipher_spec = 0;
 
-        DBG_P("=== SM wbio buffer ===\n");
 #ifndef OPENSSL_NO_SCTP
         if (!SSL_CONNECTION_IS_DTLS(s) || !BIO_dgram_is_sctp(SSL_get_wbio(ssl)))
 #endif
             if (!ssl_init_wbio_buffer(s)) {
-                DBG_P("=== SM wbio buffer fail ===\n");
                 SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
-        DBG_P("=== SM wbio buffer OK ===\n");
+        _sm_step = 15;
 
-        DBG_PV("=== SM SSL_in_before=", SSL_in_before(ssl));
-        DBG_PV("=== SM renegotiate=", s->renegotiate);
         if ((SSL_in_before(ssl))
             || s->renegotiate) {
-            DBG_P("=== SM tls_setup_handshake ===\n");
             if (!tls_setup_handshake(s)) {
-                DBG_P("=== SM tls_setup_handshake fail ===\n");
                 goto end;
             }
-            DBG_P("=== SM tls_setup_handshake OK ===\n");
+            _sm_step = 16;
 
             if (SSL_IS_FIRST_HANDSHAKE(s))
                 st->read_state_first_init = 1;
@@ -493,41 +487,39 @@ static int state_machine(SSL_CONNECTION *s, int server)
         init_write_state_machine(s);
     }
 
-    DBG_PV("=== MAIN state=", st->state);
+    _sm_step = 17;
     while (st->state != MSG_FLOW_FINISHED) {
-        DBG_PV("=== MAIN loop state=", st->state);
+        _sm_step = 18;
         if (st->state == MSG_FLOW_READING) {
-            DBG_P("=== MAIN read_state_machine ===\n");
+            _sm_step = 19;
             ssret = read_state_machine(s);
-            DBG_PV("=== MAIN read_ret=", ssret);
+            _sm_step = 20;
             if (ssret == SUB_STATE_FINISHED) {
                 st->state = MSG_FLOW_WRITING;
                 init_write_state_machine(s);
             } else {
-                /* NBIO or error */
                 goto end;
             }
         } else if (st->state == MSG_FLOW_WRITING) {
-            DBG_P("=== MAIN write_state_machine ===\n");
+            _sm_step = 21;
             ssret = write_state_machine(s);
-            DBG_PV("=== MAIN write_ret=", ssret);
+            _sm_step = 22;
             if (ssret == SUB_STATE_FINISHED) {
                 st->state = MSG_FLOW_READING;
                 init_read_state_machine(s);
             } else if (ssret == SUB_STATE_END_HANDSHAKE) {
                 st->state = MSG_FLOW_FINISHED;
             } else {
-                /* NBIO or error */
                 goto end;
             }
         } else {
-            /* Error */
             check_fatal(s);
             ERR_raise(ERR_LIB_SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
             goto end;
         }
     }
 
+    _sm_step = 23;
     ret = 1;
 
 end:

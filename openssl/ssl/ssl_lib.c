@@ -4515,6 +4515,16 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
     ssl_load_ciphers(ret);
     if ((ret->cert = ssl_cert_new(SSL_PKEY_NUM + ret->sigalg_list_len)) == NULL)
         return NULL;
+    /* Populate the cipher list so SSL_get_ciphers() works. */
+    if (!SSL_CTX_set_ciphersuites(ret, OSSL_default_ciphersuites())) {
+        SSL_CTX_free(ret);
+        return NULL;
+    }
+    ssl_create_cipher_list(ret,
+        ret->tls13_ciphersuites,
+        &ret->cipher_list,
+        &ret->cipher_list_by_id,
+        OSSL_default_cipher_list(), ret->cert);
     return ret;
 }
 

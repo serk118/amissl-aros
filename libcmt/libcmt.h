@@ -135,7 +135,12 @@ struct SocketIFace *GetSocketIFace(int modifies_errno);
 #define GETISOCKET() struct SocketIFace *ISocket = GetSocketIFace(1)
 #define GETISOCKET_NOERRNO() struct SocketIFace *ISocket = GetSocketIFace(0)
 #define GETSTATE() AMISSL_STATE *state = GetAmiSSLState()
-#define GETSOCKET() struct Library *SocketBase = GetAmiSSLState()->SocketBase
+#define GETSOCKET() \
+    struct Library *SocketBase = (GetAmiSSLState() ? GetAmiSSLState()->SocketBase : NULL); \
+    if (SocketBase == NULL) { \
+        extern struct Library *__amissl_global_SocketBase; \
+        SocketBase = __amissl_global_SocketBase; \
+    }
 #ifdef __amigaos4__
 #define GETTIMERSTATE(state) struct TimerIFace *ITimer = state->ITimer
 #else

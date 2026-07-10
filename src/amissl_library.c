@@ -347,7 +347,9 @@ LIBPROTO(InitAmiSSLA, LONG, REG(a6, __BASE_OR_IFACE), REG(a0, struct TagItem *ta
 #if defined(__AROS__)
     {
         extern struct Library *SocketBase;
+        extern struct Library *__amissl_global_SocketBase;
         SocketBase = (struct Library *)state->SocketBase;
+        __amissl_global_SocketBase = SocketBase;
     }
 #endif
 

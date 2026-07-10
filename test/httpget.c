@@ -53,6 +53,11 @@
 #if !defined(__amigaos4__)
 # include <SDI_compiler.h>
 #endif
+#if defined(__AROS__)
+# include <netinet/in.h>
+# include <sys/socket.h>
+# include <netdb.h>
+#endif
 
 static int my_strlen(const char *s)
 {
@@ -72,11 +77,59 @@ static void my_memset(void *p, int c, int n)
     unsigned char *q = (unsigned char *)p;
     while (n--) *q++ = (unsigned char)c;
 }
+static void my_memcpy(void *d, const void *s, int n)
+{
+    unsigned char *dd = (unsigned char *)d;
+    const unsigned char *ss = (const unsigned char *)s;
+    while (n--) *dd++ = *ss++;
+}
 
 long __stack = 1024 * 1024;
 
 static SSL_CTX *Init(void);
 static void Cleanup(SSL_CTX *ctx);
+
+/* Manual TCP connect — bypasses BIO_do_connect which hangs on
+ * hosted AROS (bsdsocket forwarder sockaddr bug).  Resolves the
+ * hostname via gethostbyname, creates a raw socket, connects,
+ * then wraps the fd in a BIO_new_socket so it works seamlessly
+ * with the SSL BIO chain. */
+static BIO *manual_tcp_connect(const char *host, int port)
+{
+    struct Library *sb = OpenLibrary("bsdsocket.library", 4);
+    if (!sb) return NULL;
+    {
+        /* Use AmiSSL's BIO_gethostbyname which properly wraps the AROS
+         * bsdsocket dispatch. Plain gethostbyname() as a C function call
+         * would not get the AROS inline macro and would crash. */
+        struct hostent *he = BIO_gethostbyname(host);
+        if (!he) {
+            Printf("[MC1a] gethostbyname FAILED\n");
+            CloseLibrary(sb); return NULL;
+        }
+        {
+            int fd = socket(AF_INET, SOCK_STREAM, 0);
+            if (fd < 0) { CloseLibrary(sb); return NULL; }
+            {
+                struct sockaddr_in sa;
+                my_memset(&sa, 0, sizeof(sa));
+                sa.sin_family = AF_INET;
+                sa.sin_port = htons(port);
+                if (he->h_addr)
+                    my_memcpy(&sa.sin_addr, he->h_addr, 4);
+                else {
+                    CloseLibrary(sb); return NULL;
+                }
+                if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+                    CloseLibrary(sb); return NULL;
+                }
+                BIO *bio = BIO_new_socket(fd, BIO_CLOSE);
+                CloseLibrary(sb);
+                return bio;
+            }
+        }
+    }
+}
 
 /* Check if URL is valid and extract any username/password
  */
@@ -241,28 +294,59 @@ BOOL GetURL(char *url, char *userinfo, SSL_CTX *sslctx)
             Printf("BIO chain creation failed\n");
             return FALSE;
         }
-        Printf("[G3] Connecting to %s...\n", hostport);
-        BIO_set_conn_hostname(sbio, hostport);
-
+        /* Manual TCP connect (bypasses BIO_do_connect which hangs on
+         * hosted AROS due to a bsdsocket forwarder bug). */
+        Printf("[MC1] gethostbyname %s...\n", host);
+        BIO *tcp_bio = manual_tcp_connect(host, port);
+        if (!tcp_bio) {
+            Printf("[MC1a] FAILED\n");
+            BIO_free_all(sbio);
+            return FALSE;
+        }
+        Printf("[MC2] TCP connected, wrapping SSL BIO...\n");
+        /* Replace the BIO_s_connect at the bottom of sbio with our
+         * manually connected socket BIO.  sbio is: SSL_filter(tcp_bio).
+         * We create: SSL_filter(tcp_bio) instead of SSL_filter(conn_bio).
+         */
+        {
+            BIO *ssl_bio = sbio;      /* the SSL filter BIO at top */
+            BIO *old_conn = BIO_pop(ssl_bio); /* remove the connect BIO */
+            if (old_conn) BIO_free(old_conn);
+            sbio = BIO_push(ssl_bio, tcp_bio); /* re-chain with TCP bio */
+        }
         /* Set SNI */
         {
             SSL *ssl = NULL;
             BIO_get_ssl(sbio, &ssl);
-            if (ssl)
+            if (ssl) {
                 SSL_set_tlsext_host_name(ssl, host);
+                SSL_set_connect_state(ssl);
+            }
         }
-
-        /* Connect */
-        Printf("[G4] BIO_do_connect...\n");
-        if (BIO_do_connect(sbio) <= 0) {
-            Printf("BIO_do_connect failed\n");
+        Printf("[MC3] BIO_do_handshake...\n");
+        int hs_r = BIO_do_handshake(sbio);
+        Printf("[MC3r] BIO_do_handshake returned %d\n", hs_r);
+        if (hs_r <= 0) {
+            SSL *ssl = NULL;
+            BIO_get_ssl(sbio, &ssl);
+            Printf("[MC3a] SSL handshake failed (ssl=%p)\n", (void*)ssl);
+            if (ssl) {
+                int err = SSL_get_error(ssl, 0);
+                Printf("[MC3b] SSL_get_error=%d\n", err);
+            }
+            {
+                int sock_fd = BIO_get_fd(sbio, NULL);
+                Printf("[MC3c] sbio fd=%d\n", sock_fd);
+            }
             if ((bio_err = BIO_new_fp_amiga(Output(), BIO_NOCLOSE | BIO_FP_TEXT)) != NULL) {
                 ERR_print_errors(bio_err);
                 BIO_free(bio_err);
             }
+            Printf("[MC3d] BIO_do_handshake FAILED (not a hang)\n");
             BIO_free_all(sbio);
             return FALSE;
         }
+        Printf("[MC4] BIO_do_handshake OK\n");
     }
     Printf("[G5] Connected, sending request...\n");
 
