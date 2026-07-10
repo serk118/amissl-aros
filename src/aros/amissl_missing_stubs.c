@@ -136,21 +136,7 @@ void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
 /* Strong alias for SocketBase — used by libcmt GETSOCKET() fallback */
 struct Library *__amissl_global_SocketBase = NULL;
 
-/* Override socket stubs from amissl_stubs_aros.c (which always return -1).
-   Compile without AMISSL_COMPILE so proto/bsdsocket.h works properly.
-   The function body calls through the AROS inline macro which dispatches
-   through SocketBase. */
-#include <proto/bsdsocket.h>
-int send(int s, const void *buf, int len, int flags) { if(!SocketBase)return -1;return send(s,buf,len,flags); }
-int recv(int s, void *buf, int len, int flags) { if(!SocketBase)return -1;return recv(s,buf,len,flags); }
-int connect(int s, const struct sockaddr *addr, int addrlen) { if(!SocketBase)return -1;return connect(s,addr,addrlen); }
-int socket(int domain, int type, int protocol) { if(!SocketBase)return -1;return socket(domain,type,protocol); }
-int bind(int s, const struct sockaddr *addr, int addrlen) { if(!SocketBase)return -1;return bind(s,addr,addrlen); }
-int listen(int s, int backlog) { if(!SocketBase)return -1;return listen(s,backlog); }
-int closesocket(int s) { if(!SocketBase)return -1;return closesocket(s); }
-int shutdown(int s, int how) { if(!SocketBase)return -1;return shutdown(s,how); }
-int setsockopt(int s, int l, int n, const void *v, int o) { if(!SocketBase)return -1;return setsockopt(s,l,n,v,o); }
-int getsockopt(int s, int l, int n, void *v, int *o) { if(!SocketBase)return -1;return getsockopt(s,l,n,v,o); }
+
 
 /* SocketBase is provided by the AROS bsdsocket.library stub system.
  * Do NOT define it here — let the linker resolve it from -lamiga or -larossupport.

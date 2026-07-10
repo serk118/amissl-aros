@@ -1021,32 +1021,16 @@ int *LIB__shadow_DES_check_key(struct Library *b) { (void)b; return NULL; }
 X509 *LIB_SSL_get_peer_certificate(struct Library *b, const SSL *s) { (void)b; (void)s; return NULL; }
 
 /* Stub implementations for functions not available on AROS */
-int shutdown(int sockfd, int how) { (void)sockfd; (void)how; return 0; }
 int ShowRequester(void) { return 0; }
 int UI_read_string_lib(void *ui, void *uis) { (void)ui; (void)uis; return 0; }
 int UI_write_string_lib(void *ui, void *uis) { (void)ui; (void)uis; return 0; }
-int accept(int sockfd, void* addr, void* addrlen) { (void)sockfd; (void)addr; (void)addrlen; return -1; }
-int bind(int sockfd, const void* addr, void* addrlen) { (void)sockfd; (void)addr; (void)addrlen; return -1; }
-int closesocket(int sockfd) { (void)sockfd; return -1; }
-int connect(int sockfd, const void* addr, void* addrlen) { (void)sockfd; (void)addr; (void)addrlen; return -1; }
 void exit(int status) { (void)status; while(1); }
 int FPrintf(void* file, const char* fmt, ...) { (void)file; (void)fmt; return 0; }
 void freeaddrinfo(void* res) { (void)res; }
 const char* gai_strerror(int errcode) { (void)errcode; return "unknown"; }
 int getaddrinfo(const char* node, const char* service, const void* hints, void** res) { (void)node; (void)service; (void)hints; (void)res; return -1; }
 int getnameinfo(const void* sa, void* salen, char* host, void* hostlen, char* serv, void* servlen, int flags) { (void)sa; (void)salen; (void)host; (void)hostlen; (void)serv; (void)servlen; (void)flags; return -1; }
-int getpeername(int sockfd, void* addr, void* addrlen) { (void)sockfd; (void)addr; (void)addrlen; return -1; }
-int getsockname(int sockfd, void* addr, void* addrlen) { (void)sockfd; (void)addr; (void)addrlen; return -1; }
-int getsockopt(int sockfd, int level, int optname, void* optval, void* optlen) { (void)sockfd; (void)level; (void)optname; (void)optval; (void)optlen; return -1; }
-int ioctlsocket(int sockfd, long cmd, void* argp) { (void)sockfd; (void)cmd; (void)argp; return -1; }
-int listen(int sockfd, int backlog) { (void)sockfd; (void)backlog; return -1; }
 void* OpenAmiSSLTags(void *taglist) { (void)taglist; return NULL; }
-int recv(int sockfd, void* buf, size_t len, int flags) { (void)sockfd; (void)buf; (void)len; (void)flags; return -1; }
-int recvfrom(int sockfd, void* buf, size_t len, int flags, void* src_addr, void* addrlen) { (void)sockfd; (void)buf; (void)len; (void)flags; (void)src_addr; (void)addrlen; return -1; }
-int select(int nfds, void* readfds, void* writefds, void* exceptfds, void* timeout) { (void)nfds; (void)readfds; (void)writefds; (void)exceptfds; (void)timeout; return -1; }
-int send(int sockfd, const void* buf, size_t len, int flags) { (void)sockfd; (void)buf; (void)len; (void)flags; return -1; }
-int sendto(int sockfd, const void* buf, size_t len, int flags, const void* dest_addr, void* addrlen) { (void)sockfd; (void)buf; (void)len; (void)flags; (void)dest_addr; (void)addrlen; return -1; }
-int setsockopt(int sockfd, int level, int optname, const void* optval, void* optlen) { (void)sockfd; (void)level; (void)optname; (void)optval; (void)optlen; return -1; }
 
 #include "amissl_stubs_aros_gen.c"
 #include "amissl_missing_lib_stubs.c"

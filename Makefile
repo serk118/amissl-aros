@@ -561,8 +561,8 @@ $(BUILD_D)/amissl_v$(VERSIONNAME).library: $(LIBOBJS) $(LIBCMT) $(LIBSSL) $(LIBC
 	@echo "  LD $@"
 ifeq ($(OS), aros-x86_64)
 	@echo "  (AROS x86_64: direct link with stubs)"
-	$(CC) $(APPCFLAGS) -I./include/netinclude -I./openssl/crypto/include -I./openssl -I./openssl/include -c -o $(BUILD_D)/amissl_missing_stubs.o $(SRC_D)/aros/amissl_missing_stubs.c 2>/dev/null || true
-	$(CC) -o $@ $(LDFLAGS) $(BUILD_D)/amissl_missing_stubs.o $(LIBS) $(LIBOBJS) $(LDLIBS) $(LIBS) 2>/dev/null && \
+	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c -o $(BUILD_D)/amissl_missing_stubs.o $(SRC_D)/aros/amissl_missing_stubs.c 2>/dev/null || true
+	$(CC) -o $@ $(LDFLAGS) $(BUILD_D)/amissl_missing_stubs.o $(LIBOBJS) $(LIBS) $(LDLIBS) $(LIBS) 2>/dev/null && \
 	python3 -c "import sys;f=open(sys.argv[1],'r+b');f.seek(7);f.write(b'\x0f\x0b');f.close()" "$@" 2>/dev/null; :
 else
 	@rm -rf $(BUILD_D)/.amissl_merge_objs

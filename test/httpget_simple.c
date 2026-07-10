@@ -16,6 +16,13 @@
 long __stack = 1024 * 1024;
 struct Library *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 
+static void info_cb(const SSL *s, int where, int ret)
+{
+    (void)ret;
+    if (where & SSL_CB_LOOP)
+        Printf("  [HS] %s\n", SSL_state_string_long(s));
+}
+
 static int manual_tcp_connect(const char *host, int port)
 {
     struct hostent *he = gethostbyname(host);
@@ -69,6 +76,29 @@ int main(int argc, char *argv[])
     fd = manual_tcp_connect(host, port);
     if (fd < 0) { Printf("FAIL connect\n"); goto cleanup; }
     Printf("Connected fd=%d\n", fd);
+
+    /* Test raw send/recv (was broken due to socket stubs) */
+    {
+        char req[] = "GET / HTTP/1.0\r\nHost: example.com\r\n\r\n";
+        int w = send(fd, req, (int)sizeof(req) - 1, 0);
+        Printf("raw send=%d errno=%d\n", w, errno);
+        if (w > 0) {
+            char buf[256];
+            int r = recv(fd, buf, 255, 0);
+            buf[r > 0 ? r : 0] = '\0';
+            Printf("raw recv=%d first=%.50s\n", r, buf);
+        }
+    }
+    /* Reconnect (raw test consumed the connection) */
+    CloseSocket(fd);
+    fd = manual_tcp_connect("example.com", 443);
+    if (fd < 0) { Printf("FAIL reconnect\n"); goto cleanup; }
+    Printf("reconnected fd=%d\n", fd);
+
+    SSL_CTX_set_info_callback(ctx, [](const SSL *s, int where, int ret) {
+        if (where & SSL_CB_LOOP)
+            Printf("  [HS] %s\n", SSL_state_string_long(s));
+    });
 
     if (!(ssl = SSL_new(ctx))) { Printf("FAIL SSL_new\n"); goto cleanup; }
     SSL_set_fd(ssl, fd);
