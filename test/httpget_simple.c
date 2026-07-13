@@ -5,6 +5,8 @@
 #include <libraries/amissl.h>
 #include <amissl/tags.h>
 #include <utility/tagitem.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
 #if defined(__AROS__)
 # include <proto/socket.h>
 # include <netinet/in.h>
@@ -12,6 +14,37 @@
 # include <netdb.h>
 # include <errno.h>
 #endif
+
+/* Simple LCG RNG to bypass DRBG/entropy hanging */
+static unsigned int lcg_state = 0xdeadbeef;
+static int lcg_bytes(unsigned char *buf, int num)
+{
+    int i;
+    for (i = 0; i < num; i++) {
+        lcg_state = lcg_state * 1103515245 + 12345;
+        buf[i] = (unsigned char)(lcg_state >> 16);
+    }
+    return 1;
+}
+static int lcg_status(void) { return 1; }
+static int lcg_seed(const void *buf, int num)
+{
+    if (num >= (int)sizeof(unsigned int))
+        lcg_state ^= *(const unsigned int *)buf;
+    return 1;
+}
+static RAND_METHOD lcg_rand = {
+    .seed = lcg_seed,
+    .bytes = lcg_bytes,
+    .cleanup = NULL,
+    .add = NULL,
+    .pseudorand = lcg_bytes,
+    .status = lcg_status
+};
+static void use_lcg_rng(void)
+{
+    RAND_set_rand_method(&lcg_rand);
+}
 
 long __stack = 1024 * 1024;
 struct Library *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
@@ -67,6 +100,15 @@ int main(int argc, char *argv[])
     }
     Printf("InitAmiSSLA OK\n");
 
+    /* Install LCG RNG BEFORE any RAND_bytes/SSL_connect calls
+     * to avoid DRBG hang in ossl_pool_acquire_entropy (timer.device DoIO hangs on hosted AROS) */
+    use_lcg_rng();
+    {
+        unsigned int seed = 0x12345678;
+        RAND_seed(&seed, sizeof(seed));
+    }
+    Printf("LCG RNG installed\n");
+
     if (!(ctx = SSL_CTX_new(TLS_client_method()))) {
         Printf("FAIL SSL_CTX_new\n"); goto cleanup;
     }
@@ -95,10 +137,7 @@ int main(int argc, char *argv[])
     if (fd < 0) { Printf("FAIL reconnect\n"); goto cleanup; }
     Printf("reconnected fd=%d\n", fd);
 
-    SSL_CTX_set_info_callback(ctx, [](const SSL *s, int where, int ret) {
-        if (where & SSL_CB_LOOP)
-            Printf("  [HS] %s\n", SSL_state_string_long(s));
-    });
+    SSL_CTX_set_info_callback(ctx, info_cb);
 
     if (!(ssl = SSL_new(ctx))) { Printf("FAIL SSL_new\n"); goto cleanup; }
     SSL_set_fd(ssl, fd);
@@ -110,6 +149,11 @@ int main(int argc, char *argv[])
         Printf("SSL_connect returned %d\n", r);
         if (r <= 0) {
             Printf("SSL_get_error=%d\n", SSL_get_error(ssl, r));
+            {
+                unsigned long e;
+                while ((e = ERR_get_error()) != 0)
+                    Printf("  ERR: %s\n", ERR_error_string(e, NULL));
+            }
         } else {
             Printf("SSL handshake OK!\n");
         }
