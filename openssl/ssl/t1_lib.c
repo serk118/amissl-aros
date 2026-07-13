@@ -336,12 +336,14 @@ static int add_provider_groups(const OSSL_PARAM params[], void *data)
     ret = 1;
     ERR_set_mark();
     keymgmt = EVP_KEYMGMT_fetch(ctx->libctx, ginf->algorithm, ctx->propq);
-    if (keymgmt != NULL) {
-        /* We have successfully fetched the algorithm, we can use the group. */
-        ctx->group_list_len++;
-        ginf = NULL;
+    /* Always add the group - EVP_KEYMGMT_fetch may fail on AROS
+     * due to provider dispatch issues, but the group still needs
+     * to be available for TLS handshake. The keymgmt will be
+     * fetched again when actually needed at handshake time. */
+    ctx->group_list_len++;
+    ginf = NULL;
+    if (keymgmt != NULL)
         EVP_KEYMGMT_free(keymgmt);
-    }
     ERR_pop_to_mark();
 err:
     if (ginf != NULL) {
