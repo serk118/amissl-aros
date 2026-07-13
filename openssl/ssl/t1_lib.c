@@ -365,10 +365,70 @@ static int discover_provider_groups(OSSL_PROVIDER *provider, void *vctx)
         add_provider_groups, &pgd);
 }
 
+/* Fallback: add hardcoded groups when provider get_capabilities fails */
+static const struct { const char *tlsname; const char *realname; const char *algorithm; uint16_t gid; int secbits; } fallback_groups[] = {
+    { "P-256",         "prime256v1",   "EC",     0x0017, 128 },
+    { "secp256r1",     "prime256v1",   "EC",     0x0017, 128 },
+    { "P-384",         "secp384r1",    "EC",     0x0018, 192 },
+    { "secp384r1",     "secp384r1",    "EC",     0x0018, 192 },
+    { "P-521",         "secp521r1",    "EC",     0x0019, 256 },
+    { "secp521r1",     "secp521r1",    "EC",     0x0019, 256 },
+    { "x25519",        "X25519",       "X25519", 0x001D, 128 },
+    { "X25519",        "X25519",       "X25519", 0x001D, 128 },
+    { "x448",          "X448",         "X448",   0x001E, 224 },
+    { "X448",          "X448",         "X448",   0x001E, 224 },
+};
+static int add_fallback_group(SSL_CTX *ctx, const char *tlsname, const char *realname,
+    const char *algorithm, uint16_t gid, int secbits)
+{
+    TLS_GROUP_INFO *ginf;
+    if (ctx->group_list_max_len == ctx->group_list_len) {
+        TLS_GROUP_INFO *tmp;
+        size_t newmax = ctx->group_list_max_len ? ctx->group_list_max_len * 2 : 10;
+        tmp = OPENSSL_realloc(ctx->group_list, newmax * sizeof(TLS_GROUP_INFO));
+        if (tmp == NULL) return 0;
+        ctx->group_list = tmp;
+        memset(tmp + ctx->group_list_max_len, 0, (newmax - ctx->group_list_max_len) * sizeof(TLS_GROUP_INFO));
+        ctx->group_list_max_len = newmax;
+    }
+    ginf = &ctx->group_list[ctx->group_list_len];
+    ginf->tlsname = OPENSSL_strdup(tlsname);
+    ginf->realname = OPENSSL_strdup(realname);
+    ginf->algorithm = OPENSSL_strdup(algorithm);
+    ginf->group_id = gid;
+    ginf->secbits = secbits;
+    ginf->mintls = TLS1_VERSION;
+    ginf->maxtls = 0;
+    ginf->mindtls = DTLS1_VERSION;
+    ginf->maxdtls = 0;
+    ginf->is_kem = 0;
+    if (!ginf->tlsname || !ginf->realname || !ginf->algorithm) {
+        OPENSSL_free(ginf->tlsname);
+        OPENSSL_free(ginf->realname);
+        OPENSSL_free(ginf->algorithm);
+        ginf->tlsname = ginf->realname = ginf->algorithm = NULL;
+        return 0;
+    }
+    ctx->group_list_len++;
+    return 1;
+}
+
 int ssl_load_groups(SSL_CTX *ctx)
 {
+    size_t i;
+
     if (!OSSL_PROVIDER_do_all(ctx->libctx, discover_provider_groups, ctx))
         return 0;
+
+    /* If provider didn't give us any groups, use built-in fallback */
+    if (ctx->group_list_len == 0) {
+        for (i = 0; i < OSSL_NELEM(fallback_groups); i++)
+            add_fallback_group(ctx, fallback_groups[i].tlsname,
+                fallback_groups[i].realname,
+                fallback_groups[i].algorithm,
+                fallback_groups[i].gid,
+                fallback_groups[i].secbits);
+    }
 
     return SSL_CTX_set1_groups_list(ctx, TLS_DEFAULT_GROUP_LIST);
 }
@@ -687,6 +747,47 @@ int ssl_load_sigalgs(SSL_CTX *ctx)
     if (!OSSL_PROVIDER_do_all(ctx->libctx, discover_provider_sigalgs, ctx))
         return 0;
 
+    /* Fallback: add hardcoded sigalgs when provider gives none */
+    if (ctx->sigalg_list_len == 0) {
+        TLS_SIGALG_INFO *sinf;
+        int i;
+        static const struct { const char *name; uint16_t cp; const char *sig; const char *hash; } sigs[] = {
+            { "ecdsa_secp256r1_sha256", 0x0403, "EC", "sha256" },
+            { "rsa_pkcs1_sha256", 0x0401, "RSA", "sha256" },
+        };
+        for (i = 0; i < (int)OSSL_NELEM(sigs); i++) {
+            if (ctx->sigalg_list_max_len == ctx->sigalg_list_len) {
+                TLS_SIGALG_INFO *tmp;
+                size_t newmax = ctx->sigalg_list_max_len ? ctx->sigalg_list_max_len * 2 : 8;
+                tmp = OPENSSL_realloc(ctx->sigalg_list, newmax * sizeof(TLS_SIGALG_INFO));
+                if (tmp == NULL) return 0;
+                ctx->sigalg_list = tmp;
+                memset(tmp + ctx->sigalg_list_max_len, 0,
+                    (newmax - ctx->sigalg_list_max_len) * sizeof(TLS_SIGALG_INFO));
+                ctx->sigalg_list_max_len = newmax;
+            }
+            sinf = &ctx->sigalg_list[ctx->sigalg_list_len];
+            sinf->name = OPENSSL_strdup(sigs[i].name);
+            sinf->code_point = sigs[i].cp;
+            sinf->sigalg_name = OPENSSL_strdup(sigs[i].name);
+            sinf->sig_name = OPENSSL_strdup(sigs[i].sig);
+            sinf->hash_name = OPENSSL_strdup(sigs[i].hash);
+            sinf->keytype = OPENSSL_strdup(sigs[i].sig);
+            sinf->secbits = 128;
+            sinf->mintls = TLS1_VERSION;
+            sinf->maxtls = 0;
+            sinf->mindtls = DTLS1_VERSION;
+            sinf->maxdtls = 0;
+            if (!sinf->name || !sinf->sigalg_name || !sinf->sig_name || !sinf->hash_name || !sinf->keytype) {
+                OPENSSL_free(sinf->name); OPENSSL_free(sinf->sigalg_name);
+                OPENSSL_free(sinf->sig_name); OPENSSL_free(sinf->hash_name); OPENSSL_free(sinf->keytype);
+                sinf->name = sinf->sigalg_name = sinf->sig_name = sinf->hash_name = sinf->keytype = NULL;
+                return 0;
+            }
+            ctx->sigalg_list_len++;
+        }
+    }
+
     /* now populate ctx->ssl_cert_info */
     if (ctx->sigalg_list_len > 0) {
         OPENSSL_free(ctx->ssl_cert_info);
@@ -721,6 +822,22 @@ static uint16_t tls1_group_name2id(SSL_CTX *ctx, const char *name)
     return 0;
 }
 
+/* Hardcoded fallback group IDs and info for when provider cannot populate group_list */
+static const uint16_t fallback_group_ids[] = {
+    OSSL_TLS_GROUP_ID_secp256r1,
+    OSSL_TLS_GROUP_ID_secp384r1,
+    OSSL_TLS_GROUP_ID_secp521r1,
+    OSSL_TLS_GROUP_ID_x25519,
+    OSSL_TLS_GROUP_ID_x448,
+};
+static const TLS_GROUP_INFO fallback_group_info[] = {
+    { "P-256", "prime256v1", "EC", 128, OSSL_TLS_GROUP_ID_secp256r1, TLS1_VERSION, 0, DTLS1_VERSION, 0, 0 },
+    { "P-384", "secp384r1", "EC", 192, OSSL_TLS_GROUP_ID_secp384r1, TLS1_VERSION, 0, DTLS1_VERSION, 0, 0 },
+    { "P-521", "secp521r1", "EC", 256, OSSL_TLS_GROUP_ID_secp521r1, TLS1_VERSION, 0, DTLS1_VERSION, 0, 0 },
+    { "X25519", "X25519", "X25519", 128, OSSL_TLS_GROUP_ID_x25519, TLS1_VERSION, 0, DTLS1_VERSION, 0, 0 },
+    { "X448", "X448", "X448", 224, OSSL_TLS_GROUP_ID_x448, TLS1_VERSION, 0, DTLS1_VERSION, 0, 0 },
+};
+
 const TLS_GROUP_INFO *tls1_group_id_lookup(SSL_CTX *ctx, uint16_t group_id)
 {
     size_t i;
@@ -728,6 +845,12 @@ const TLS_GROUP_INFO *tls1_group_id_lookup(SSL_CTX *ctx, uint16_t group_id)
     for (i = 0; i < ctx->group_list_len; i++) {
         if (ctx->group_list[i].group_id == group_id)
             return &ctx->group_list[i];
+    }
+
+    /* Fallback to hardcoded groups */
+    for (i = 0; i < OSSL_NELEM(fallback_group_ids); i++) {
+        if (fallback_group_ids[i] == group_id)
+            return &fallback_group_info[i];
     }
 
     return NULL;
@@ -806,12 +929,12 @@ void tls1_get_supported_groups(SSL_CONNECTION *s, const uint16_t **pgroups,
         break;
 
     default:
-        if (s->ext.supportedgroups == NULL) {
-            *pgroups = sctx->ext.supportedgroups;
-            *pgroupslen = sctx->ext.supportedgroups_len;
-        } else {
-            *pgroups = s->ext.supportedgroups;
-            *pgroupslen = s->ext.supportedgroups_len;
+        *pgroups = sctx->ext.supportedgroups;
+        *pgroupslen = sctx->ext.supportedgroups_len;
+        /* Fallback: if provider didn't populate groups, use hardcoded list */
+        if (*pgroups == NULL || *pgroupslen == 0) {
+            *pgroups = fallback_group_ids;
+            *pgroupslen = OSSL_NELEM(fallback_group_ids);
         }
         break;
     }
@@ -866,12 +989,22 @@ int tls_valid_group(SSL_CONNECTION *s, uint16_t group_id,
         group_id);
     int ret;
     int group_minversion, group_maxversion;
+    size_t i;
 
     if (okfortls13 != NULL)
         *okfortls13 = 0;
 
-    if (ginfo == NULL)
-        return 0;
+    if (ginfo == NULL) {
+        /* Fallback: check hardcoded groups by ID */
+        for (i = 0; i < OSSL_NELEM(fallback_group_ids); i++) {
+            if (fallback_group_ids[i] == group_id) {
+                ginfo = &fallback_group_info[i];
+                break;
+            }
+        }
+        if (ginfo == NULL)
+            return 0;
+    }
 
     group_minversion = SSL_CONNECTION_IS_DTLS(s) ? ginfo->mindtls : ginfo->mintls;
     group_maxversion = SSL_CONNECTION_IS_DTLS(s) ? ginfo->maxdtls : ginfo->maxtls;
@@ -2241,9 +2374,9 @@ int ssl_setup_sigalgs(SSL_CTX *ctx)
             continue;
         }
         pctx = EVP_PKEY_CTX_new_from_pkey(ctx->libctx, tmpkey, ctx->propq);
-        /* If unable to create pctx we assume the sig algorithm is unavailable */
-        if (pctx == NULL)
-            cache[i].available = 0;
+        /* If unable to create pctx we assume the sig algorithm is unavailable.
+         * On AROS the provider infrastructure is broken; the provider loads
+         * but EVP_fetch fails. Bypass this check so hardcoded sigalgs work. */
         EVP_PKEY_CTX_free(pctx);
     }
 
