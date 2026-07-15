@@ -442,16 +442,17 @@ static int state_machine(SSL_CONNECTION *s, int server)
         s->s3.change_cipher_spec = 0;
 
 #if defined(__AROS__)
+        if (s->rlayer.wrlmethod != NULL && s->rlayer.wrl != NULL)
             s->rlayer.wrlmethod->set1_bio(s->rlayer.wrl, s->wbio);
-#else
+        else
+#endif
 #ifndef OPENSSL_NO_SCTP
         if (!SSL_CONNECTION_IS_DTLS(s) || !BIO_dgram_is_sctp(SSL_get_wbio(ssl)))
 #endif
             if (!ssl_init_wbio_buffer(s)) {
-                SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
-#endif
         _sm_step = 15;
 
         if ((SSL_in_before(ssl))

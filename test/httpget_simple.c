@@ -1,4 +1,3 @@
-/* Simple test: SSL_set_fd + SSL_connect */
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/amissl.h>
@@ -58,13 +57,11 @@ int main(void)
     { struct hostent *he=gethostbyname("httpbin.org");
       fd=socket(AF_INET,SOCK_STREAM,0);
       struct sockaddr_in sa; sa.sin_family=AF_INET; sa.sin_port=htons(443);
-      sa.sin_addr=*(struct in_addr*)he->h_addr; connect(fd,(struct sockaddr*)&sa,sizeof(sa)); }
+      sa.sin_addr=*(struct in_addr*)he->h_addr;
+      int cr = connect(fd,(struct sockaddr*)&sa,sizeof(sa));
+      Printf("connect=%d errno=%d\n", cr, errno); Flush(Output()); }
+    Printf("Connected\n"); Flush(Output());
     ssl=SSL_new(ctx); SSL_set_fd(ssl,fd); SSL_set_connect_state(ssl);
-    { /* Test raw send still works after SSL_set_fd */
-      int wr = send(fd, "PING", 4, 0);
-      Printf("raw send=%d errno=%d\n", wr, errno); Flush(Output());
-    }
-    Printf("Calling SSL_connect...\n"); Flush(Output());
     { int r=SSL_connect(ssl);
       Printf("r=%d err=%d peek=0x%08lx\n",r,SSL_get_error(ssl,r),ERR_peek_error());
       unsigned long e; while((e=ERR_get_error())!=0) Printf("ERR=%s\n",ERR_error_string(e,NULL)); }
