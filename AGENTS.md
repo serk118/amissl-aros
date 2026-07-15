@@ -81,10 +81,21 @@ cat test_output.txt
 - After modifying SSL source, the AmiSSL Makefile detects changes, recompiles, and re-links
 
 ## To Resume Later
-1. Check background build: `tail -f /tmp/build_full.log`
-2. Wait for `build_aros-x86_64/amissl_v362.library` to appear
+1. Build: `export PATH="..." && export SYSROOT="..." && make OS=aros-x86_64 CROSS_PREFIX=x86_64-aros- DEBUG=`
+2. If OpenSSL build fails (Makefile out of date), run `make` again
 3. Deploy: `cp build_aros-x86_64/amissl_v362.library ~/.../Libs/ && cp build_aros-x86_64/httpget_simple ~/.../tests/`
 4. Test: `cd ~/work/arosbuilds/deadwood-core-x86_64/AROS-.../ && timeout 60 ./boot/linux/AROSBootstrap`
 5. Check: `cat test_output.txt`
 
-All changes committed at SHA `a1eae54`.
+## Next Session Priority
+Investigate why SSL_connect still hangs after:
+- Version fix (sc->version = TLS1_3_VERSION) ✓
+- max_send_fragment fallback ✓  
+- buffer BIO flush added ✓
+
+Hypothesis: BIO_write in tls_retry_write_records may be failing silently
+(BIO_flush returns error ignored), or the buffer BIO is still buffering
+without flushing. Check if BIO_flush return value is being ignored in
+ssl3_do_write (line 99 of statem_lib.c).
+
+All changes committed at SHA `599e366`.

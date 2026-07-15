@@ -441,11 +441,6 @@ static int state_machine(SSL_CONNECTION *s, int server)
         s->init_num = 0;
         s->s3.change_cipher_spec = 0;
 
-#if defined(__AROS__)
-        if (s->rlayer.wrlmethod != NULL && s->rlayer.wrl != NULL)
-            s->rlayer.wrlmethod->set1_bio(s->rlayer.wrl, s->wbio);
-        else
-#endif
 #ifndef OPENSSL_NO_SCTP
         if (!SSL_CONNECTION_IS_DTLS(s) || !BIO_dgram_is_sctp(SSL_get_wbio(ssl)))
 #endif
