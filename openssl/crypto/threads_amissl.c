@@ -307,13 +307,24 @@ int CRYPTO_THREAD_compare_id(CRYPTO_THREAD_ID a, CRYPTO_THREAD_ID b)
 
 int CRYPTO_atomic_add(int *val, int amount, int *ret, CRYPTO_RWLOCK *lock)
 {
+    /* Use a real x86 atomic add (lock xadd) to avoid both GCC
+     * __atomic builtin bugs and semaphore lock issues on AROS.
+     * Fallback to lock-based add if we can't use inline asm. */
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__ __volatile__(
+        "lock xaddl %0, %1"
+        : "+r" (amount), "+m" (*val)
+        :
+        : "memory");
+    *ret = amount;
+#else
     /* AmiSSL is single-threaded, so we don't need the lock.
      * Using ObtainSemaphore on the refcount lock can cause issues
      * with certain lock implementations on AROS x86_64. */
     (void)lock;
     *val += amount;
     *ret  = *val;
-
+#endif
     return 1;
 }
 

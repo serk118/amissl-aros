@@ -347,22 +347,20 @@ static int def_generate_session_id(SSL *ssl, unsigned char *id,
 
 int ssl_generate_session_id(SSL_CONNECTION *s, SSL_SESSION *ss)
 {
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"("[GEN_SESSION_ID]\n"), "d"(17) : "rcx","r11","memory"); (void)_w; }
     unsigned int tmp;
     GEN_SESSION_CB cb = def_generate_session_id;
     SSL *ssl = SSL_CONNECTION_GET_SSL(s);
 
-    switch (s->version) {
-    case SSL3_VERSION:
-    case TLS1_VERSION:
-    case TLS1_1_VERSION:
-    case TLS1_2_VERSION:
-    case TLS1_3_VERSION:
-    case DTLS1_BAD_VER:
-    case DTLS1_VERSION:
-    case DTLS1_2_VERSION:
+    /* Accept any version >= TLS 1.0 (or DTLS equivalent) */
+    if (s->version >= TLS1_VERSION
+        || s->version == SSL3_VERSION
+        || s->version == DTLS1_BAD_VER
+        || s->version == DTLS1_VERSION
+        || s->version == DTLS1_2_VERSION) {
         ss->session_id_length = SSL3_SSL_SESSION_ID_LENGTH;
-        break;
-    default:
+    } else {
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"("[GEN_SESSION_ID FAIL]\n"), "d"(22) : "rcx","r11","memory"); (void)_w; }
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNSUPPORTED_SSL_VERSION);
         return 0;
     }

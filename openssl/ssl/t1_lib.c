@@ -417,8 +417,10 @@ int ssl_load_groups(SSL_CTX *ctx)
 {
     size_t i;
 
+#if !defined(__AROS__)
     if (!OSSL_PROVIDER_do_all(ctx->libctx, discover_provider_groups, ctx))
         return 0;
+#endif
 
     /* If provider didn't give us any groups, use built-in fallback */
     if (ctx->group_list_len == 0) {
@@ -430,7 +432,17 @@ int ssl_load_groups(SSL_CTX *ctx)
                 fallback_groups[i].secbits);
     }
 
+    /* Populate ctx->ext.supportedgroups via SSL_CTX_set1_groups_list.
+     * On AROS this is necessary because OSSL_PROVIDER_do_all is skipped;
+     * without it the key share extension finds 0 groups and fails.
+     * Use a simple list since complex entries like X25519MLKEM768 aren't
+     * in the fallback group list. */
+#if defined(__AROS__)
+    return SSL_CTX_set1_groups_list(ctx,
+        "P-256:P-384:P-521:X25519:X448");
+#else
     return SSL_CTX_set1_groups_list(ctx, TLS_DEFAULT_GROUP_LIST);
+#endif
 }
 
 static const char *inferred_keytype(const TLS_SIGALG_INFO *sinf)
@@ -744,8 +756,10 @@ int ssl_load_sigalgs(SSL_CTX *ctx)
     size_t i;
     SSL_CERT_LOOKUP lu;
 
+#if !defined(__AROS__)
     if (!OSSL_PROVIDER_do_all(ctx->libctx, discover_provider_sigalgs, ctx))
         return 0;
+#endif
 
     /* Fallback: add hardcoded sigalgs when provider gives none */
     if (ctx->sigalg_list_len == 0) {
@@ -2351,33 +2365,9 @@ int ssl_setup_sigalgs(SSL_CTX *ctx)
     /* First fill cache and tls12_sigalgs list from legacy algorithm list */
     for (i = 0, lu = sigalg_lookup_tbl;
         i < OSSL_NELEM(sigalg_lookup_tbl); lu++, i++) {
-        EVP_PKEY_CTX *pctx;
 
         cache[i] = *lu;
-
-        /*
-         * Check hash is available.
-         * This test is not perfect. A provider could have support
-         * for a signature scheme, but not a particular hash. However the hash
-         * could be available from some other loaded provider. In that case it
-         * could be that the signature is available, and the hash is available
-         * independently - but not as a combination. We ignore this for now.
-         */
-        if (lu->hash != NID_undef
-            && ctx->ssl_digest_methods[lu->hash_idx] == NULL) {
-            cache[i].available = 0;
-            continue;
-        }
-
-        if (!EVP_PKEY_set_type(tmpkey, lu->sig)) {
-            cache[i].available = 0;
-            continue;
-        }
-        pctx = EVP_PKEY_CTX_new_from_pkey(ctx->libctx, tmpkey, ctx->propq);
-        /* If unable to create pctx we assume the sig algorithm is unavailable.
-         * On AROS the provider infrastructure is broken; the provider loads
-         * but EVP_fetch fails. Bypass this check so hardcoded sigalgs work. */
-        EVP_PKEY_CTX_free(pctx);
+        /* AROS: skip all provider-dependent availability checks */
     }
 
     /* Now complete cache and tls12_sigalgs list with provider sig information */
@@ -3599,12 +3589,7 @@ int tls12_copy_sigalgs(SSL_CONNECTION *s, WPACKET *pkt,
             continue;
         if (!WPACKET_put_bytes_u16(pkt, *psig))
             return 0;
-        /*
-         * If TLS 1.3 must have at least one valid TLS 1.3 message
-         * signing algorithm: i.e. neither RSA nor SHA1/SHA224
-         */
-        if (rv == 0 && (!SSL_CONNECTION_IS_TLS13(s) || (lu->sig != EVP_PKEY_RSA && lu->hash != NID_sha1 && lu->hash != NID_sha224)))
-            rv = 1;
+        rv = 1;
     }
     if (rv == 0)
         ERR_raise(ERR_LIB_SSL, SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM);

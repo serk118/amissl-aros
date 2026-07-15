@@ -76,7 +76,7 @@ static inline int CRYPTO_GET_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
     return 1;
 }
 
-#elif defined(__GNUC__) && defined(__ATOMIC_RELAXED) && __GCC_ATOMIC_INT_LOCK_FREE > 0
+#elif defined(__GNUC__) && defined(__ATOMIC_RELAXED) && __GCC_ATOMIC_INT_LOCK_FREE > 0 && !defined(__AROS__)
 
 #define HAVE_ATOMICS 1
 
@@ -101,6 +101,51 @@ static __inline__ int CRYPTO_DOWN_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
 static __inline__ int CRYPTO_GET_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
 {
     *ret = __atomic_load_n(&refcnt->val, __ATOMIC_RELAXED);
+    return 1;
+}
+
+#elif defined(__GNUC__) && defined(__AROS__)
+
+#define HAVE_ATOMICS 1
+
+typedef struct {
+    int val;
+} CRYPTO_REF_COUNT;
+
+static __inline__ int CRYPTO_UP_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
+{
+    int tmp = 1;
+    __asm__ __volatile__(
+        "lock xaddl %0, %1"
+        : "+r" (tmp), "+m" (refcnt->val)
+        :
+        : "memory");
+    *ret = tmp + 1;
+    return 1;
+}
+
+static __inline__ int CRYPTO_DOWN_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
+{
+    int tmp = -1;
+    __asm__ __volatile__(
+        "lock xaddl %0, %1"
+        : "+r" (tmp), "+m" (refcnt->val)
+        :
+        : "memory");
+    *ret = tmp - 1;
+    if (*ret == 0)
+        __asm__ __volatile__("mfence" ::: "memory");
+    return 1;
+}
+
+static __inline__ int CRYPTO_GET_REF(CRYPTO_REF_COUNT *refcnt, int *ret)
+{
+    __asm__ __volatile__(
+        "movl %1, %0"
+        : "=r" (*ret)
+        : "m" (refcnt->val)
+        :
+        );
     return 1;
 }
 

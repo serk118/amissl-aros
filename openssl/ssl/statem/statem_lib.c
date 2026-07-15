@@ -2478,18 +2478,7 @@ int ssl_get_min_max_version(const SSL_CONNECTION *s, int *min_version,
 
     switch (ssl->method->version) {
     default:
-        /*
-         * If this SSL handle is not from a version flexible method we don't
-         * (and never did) check min/max FIPS or Suite B constraints.  Hope
-         * that's OK.  It is up to the caller to not choose fixed protocol
-         * versions they don't want.  If not, then easy to fix, just return
-         * ssl_method_error(s, s->method)
-         */
         *min_version = *max_version = s->version;
-        /*
-         * Providing a real_max only makes sense where we're using a version
-         * flexible method.
-         */
         if (!ossl_assert(real_max == NULL))
             return ERR_R_INTERNAL_ERROR;
         return 0;

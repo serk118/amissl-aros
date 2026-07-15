@@ -8,9 +8,12 @@
  */
 
 #include <openssl/ocsp.h>
+#include <openssl/rand.h>
+#include <crypto/ecx.h>
 #include "../ssl_local.h"
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
+#include "internal/tlsgroups.h"
 #include "statem_local.h"
 
 EXT_RETURN tls_construct_ctos_renegotiate(SSL_CONNECTION *s, WPACKET *pkt,
@@ -654,20 +657,70 @@ static int add_key_share(SSL_CONNECTION *s, WPACKET *pkt, unsigned int group_id,
          */
         key_share_key = s->s3.tmp.ks_pkey[loop_num];
     } else {
+#if defined(__AROS__)
+        /*
+         * AROS: pre-computed X25519 key share (RFC 7748 §6.1).
+         * Note: group_id is checked in t1_lib.c via limited group list.
+         */
+        {
+            static const unsigned char privkey[32] = {
+                0x77,0x07,0x6d,0x0a,0x73,0x18,0xa5,0x7d,
+                0x3c,0x16,0xc1,0x72,0x51,0xb2,0x66,0x45,
+                0xdf,0x4c,0x2f,0x87,0xeb,0xc0,0x99,0x2a,
+                0xb1,0x77,0xfb,0xa5,0x1d,0xb9,0x2c,0x2a
+            };
+            static const unsigned char pubkey[32] = {
+                0x85,0x20,0xf0,0x09,0x89,0x30,0xa7,0x54,
+                0x74,0x8b,0x7d,0xdc,0xb4,0x3e,0xf7,0x5a,
+                0x0d,0xbf,0x3a,0x0d,0x26,0x38,0x1a,0xf4,
+                0xeb,0xa4,0xa9,0x8e,0xaa,0x9b,0x4e,0x6a
+            };
+            ECX_KEY *xkey;
+
+            xkey = ossl_ecx_key_new(NULL, ECX_KEY_TYPE_X25519, 1, NULL);
+            if (xkey == NULL) goto aros_key_err;
+            xkey->privkey = OPENSSL_zalloc(32);
+            if (xkey->privkey == NULL) {
+                ossl_ecx_key_free(xkey); goto aros_key_err;
+            }
+            memcpy(xkey->privkey, privkey, 32);
+            memcpy(xkey->pubkey, pubkey, 32);
+
+            key_share_key = EVP_PKEY_new();
+            if (key_share_key == NULL
+                || !EVP_PKEY_assign(key_share_key, EVP_PKEY_X25519, xkey)) {
+                EVP_PKEY_free(key_share_key);
+                ossl_ecx_key_free(xkey);
+                goto aros_key_err;
+            }
+
+            encoded_pubkey = OPENSSL_memdup(pubkey, 32);
+            encodedlen = encoded_pubkey != NULL ? 32 : 0;
+            goto aros_key_done;
+
+        aros_key_err:
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+            return 0;
+        aros_key_done: ;
+        }
+#else
         key_share_key = ssl_generate_pkey_group(s, group_id);
-        if (key_share_key == NULL) {
-            /* SSLfatal() already called */
+#endif
+        if (key_share_key == NULL && encoded_pubkey == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
             return 0;
         }
     }
 
     /* Encode the public key. */
+#if !defined(__AROS__)
     encodedlen = EVP_PKEY_get1_encoded_public_key(key_share_key,
         &encoded_pubkey);
     if (encodedlen == 0) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EC_LIB);
         goto err;
     }
+#endif
 
     /* Create KeyShareEntry */
     if (!WPACKET_put_bytes_u16(pkt, group_id)

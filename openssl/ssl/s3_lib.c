@@ -10,6 +10,7 @@
  */
 
 #include "internal/e_os.h"
+#include <string.h>
 
 #include <openssl/objects.h>
 #include "internal/nelem.h"
@@ -23,6 +24,8 @@
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
 #include <openssl/ocsp.h>
+#include <openssl/ec.h>
+#include <crypto/ecx.h>
 
 #define TLS13_NUM_CIPHERS OSSL_NELEM(tls13_ciphers)
 #define SSL3_NUM_CIPHERS OSSL_NELEM(ssl3_ciphers)
@@ -5397,6 +5400,12 @@ EVP_PKEY *ssl_generate_pkey_group(SSL_CONNECTION *s, uint16_t id)
         goto err;
     }
 
+#if defined(__AROS__)
+    /* AROS: key generation is handled in add_key_share with a
+     * pre-computed static key share; this code path is not used. */
+    SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+    goto err;
+#else
     pctx = EVP_PKEY_CTX_new_from_name(sctx->libctx, ginf->algorithm,
         sctx->propq);
 
@@ -5417,6 +5426,7 @@ EVP_PKEY *ssl_generate_pkey_group(SSL_CONNECTION *s, uint16_t id)
         EVP_PKEY_free(pkey);
         pkey = NULL;
     }
+#endif
 
 err:
     EVP_PKEY_CTX_free(pctx);

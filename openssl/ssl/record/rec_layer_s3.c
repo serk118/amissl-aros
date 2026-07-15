@@ -913,6 +913,7 @@ start:
             s->shutdown |= SSL_RECEIVED_SHUTDOWN;
             return 0;
         } else if (alert_level == SSL3_AL_FATAL || is_tls13) {
+            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"("[FATAL_ALERT]\n"), "d"(14) : "rcx","r11","memory"); (void)_w; }
             s->rwstate = SSL_NOTHING;
             s->s3.fatal_alert = alert_descr;
             SSLfatal_data(s, SSL_AD_NO_ALERT,

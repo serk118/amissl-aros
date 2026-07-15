@@ -606,7 +606,10 @@ int ossl_ssl_connection_reset(SSL *s)
 
     ossl_statem_clear(sc);
 
-    sc->version = s->method->version;
+    if (s->method->version == TLS_ANY_VERSION)
+        sc->version = TLS_MAX_VERSION_INTERNAL;
+    else
+        sc->version = s->method->version;
     sc->client_version = sc->version;
     sc->rwstate = SSL_NOTHING;
 
@@ -4513,6 +4516,9 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
     ret->param = X509_VERIFY_PARAM_new();
     OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
     ssl_load_ciphers(ret);
+    ssl_load_groups(ret);
+    ssl_load_sigalgs(ret);
+    ssl_setup_sigalgs(ret);
     if ((ret->cert = ssl_cert_new(SSL_PKEY_NUM + ret->sigalg_list_len)) == NULL)
         return NULL;
     /* Populate the cipher list so SSL_get_ciphers() works. */
@@ -7509,27 +7515,28 @@ uint32_t SSL_get_recv_max_early_data(const SSL *s)
 
 __owur unsigned int ssl_get_max_send_fragment(const SSL_CONNECTION *sc)
 {
-    /* Return any active Max Fragment Len extension */
+    size_t val = sc->max_send_fragment;
     if (sc->session != NULL && USE_MAX_FRAGMENT_LENGTH_EXT(sc->session))
         return GET_MAX_FRAGMENT_LENGTH(sc->session);
-
-    /* return current SSL connection setting */
-    return (unsigned int)sc->max_send_fragment;
+    if (val == 0)
+        val = SSL3_RT_MAX_PLAIN_LENGTH;
+    return (unsigned int)val;
 }
 
 __owur unsigned int ssl_get_split_send_fragment(const SSL_CONNECTION *sc)
 {
-    /* Return a value regarding an active Max Fragment Len extension */
+    size_t maxval = sc->max_send_fragment;
+    size_t splitval = sc->split_send_fragment;
+    if (maxval == 0)
+        maxval = SSL3_RT_MAX_PLAIN_LENGTH;
+    if (splitval == 0)
+        splitval = SSL3_RT_MAX_PLAIN_LENGTH;
     if (sc->session != NULL && USE_MAX_FRAGMENT_LENGTH_EXT(sc->session)
-        && sc->split_send_fragment > GET_MAX_FRAGMENT_LENGTH(sc->session))
+        && splitval > GET_MAX_FRAGMENT_LENGTH(sc->session))
         return GET_MAX_FRAGMENT_LENGTH(sc->session);
-
-    /* else limit |split_send_fragment| to current |max_send_fragment| */
-    if (sc->split_send_fragment > sc->max_send_fragment)
-        return (unsigned int)sc->max_send_fragment;
-
-    /* return current SSL connection setting */
-    return (unsigned int)sc->split_send_fragment;
+    if (splitval > maxval)
+        return (unsigned int)maxval;
+    return (unsigned int)splitval;
 }
 
 int SSL_stateless(SSL *s)

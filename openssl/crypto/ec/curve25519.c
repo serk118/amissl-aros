@@ -27,7 +27,10 @@
 
 typedef uint64_t fe64[4];
 
-int x25519_fe64_eligible(void);
+int x25519_fe64_eligible(void)
+{
+    return 0; /* fe64 not supported; use generic C path */
+}
 
 /*
  * Following subroutines perform corresponding operations modulo

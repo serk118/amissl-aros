@@ -458,7 +458,7 @@ int DTLSv1_listen(SSL *ssl, BIO_ADDR *client)
      * SSL_accept)
      */
     if ((s->version & 0xff00) != (DTLS1_VERSION & 0xff00)) {
-        ERR_raise(ERR_LIB_SSL, SSL_R_UNSUPPORTED_SSL_VERSION);
+        /* Not a DTLS version — let caller handle it */
         return -1;
     }
 

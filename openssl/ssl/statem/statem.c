@@ -352,28 +352,6 @@ static info_cb get_callback(SSL_CONNECTION *s)
  *   1: Success
  * <=0: NBIO or error
  */
-/* Debug helpers - raw Linux syscall to bypass AROS forwarder */
-#define SYS_write 1
-static void dbg_print(const char *s) {
-    long len = 0;
-    while (s[len]) len++;
-    __asm__ __volatile__("syscall"
-        : "=a"(len)
-        : "0"(SYS_write), "D"(1), "S"(s), "d"(len)
-        : "rcx", "r11", "memory");
-}
-static void dbg_int(int v) {
-    char b[32];
-    int i = 30;
-    b[31] = '\n';
-    if (v == 0) { b[30] = '0'; dbg_print(b+30); return; }
-    unsigned int u = v < 0 ? -v : v;
-    while (u > 0) { b[i--] = '0' + (u % 10); u /= 10; }
-    if (v < 0) b[i--] = '-';
-    dbg_print(b + i + 1);
-}
-#define DBG_P(str) dbg_print(str "\n")
-#define DBG_PV(str, val) do { dbg_print(str); dbg_int(val); } while(0)
 int _sm_step = 0;
 
 static int state_machine(SSL_CONNECTION *s, int server)
@@ -419,7 +397,7 @@ static int state_machine(SSL_CONNECTION *s, int server)
             st->request_state = TLS_ST_BEFORE;
         }
 
-        _sm_step = 10;
+            _sm_step = 10;
         s->server = server;
         if (cb != NULL) {
             if (SSL_IS_FIRST_HANDSHAKE(s) || !SSL_CONNECTION_IS_TLS13(s))
@@ -463,13 +441,17 @@ static int state_machine(SSL_CONNECTION *s, int server)
         s->init_num = 0;
         s->s3.change_cipher_spec = 0;
 
+#if defined(__AROS__)
+            s->rlayer.wrlmethod->set1_bio(s->rlayer.wrl, s->wbio);
+#else
 #ifndef OPENSSL_NO_SCTP
         if (!SSL_CONNECTION_IS_DTLS(s) || !BIO_dgram_is_sctp(SSL_get_wbio(ssl)))
 #endif
             if (!ssl_init_wbio_buffer(s)) {
-                SSLfatal(s, SSL_AD_NO_ALERT, ERR_R_INTERNAL_ERROR);
+                SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                 goto end;
             }
+#endif
         _sm_step = 15;
 
         if ((SSL_in_before(ssl))
@@ -898,7 +880,6 @@ static SUB_STATE_RETURN write_state_machine(SSL_CONNECTION *s)
                 return SUB_STATE_ERROR;
             }
             if (mt == SSL3_MT_DUMMY) {
-                /* Skip construction and sending. This isn't a "real" state */
                 st->write_state = WRITE_STATE_POST_WORK;
                 st->write_state_work = WORK_MORE_A;
                 break;
@@ -918,15 +899,11 @@ static SUB_STATE_RETURN write_state_machine(SSL_CONNECTION *s)
                     check_fatal(s);
                     return SUB_STATE_ERROR;
                 } else if (tmpret == CON_FUNC_DONT_SEND) {
-                    /*
-                     * The construction function decided not to construct the
-                     * message after all and continue. Skip sending.
-                     */
                     WPACKET_cleanup(&pkt);
                     st->write_state = WRITE_STATE_POST_WORK;
                     st->write_state_work = WORK_MORE_A;
                     break;
-                } /* else success */
+                }
             }
             if (!ssl_close_construct_packet(s, &pkt, mt)
                 || !WPACKET_finish(&pkt)) {
