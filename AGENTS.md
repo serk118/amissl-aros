@@ -1,4 +1,4 @@
-# AmiSSL AROS x86_64 — Agent Context (July 15, 2026 final)
+# AmiSSL AROS x86_64 — Agent Context (July 16, 2026 end)
 
 ## Build & Deploy
 ```bash
@@ -23,64 +23,50 @@ timeout 120 ./boot/linux/AROSBootstrap 2>&1
 cat test_output.txt
 ```
 
-## Current Status (July 15 late)
+## Current Status (July 16 end)
 | Test | Result |
 |------|--------|
-| amissl_simple_test | ✅ Library loads, 60 ciphers, TCP works |
-| httpget_simple (SSL_set_fd) | ✅ Returns ERR_R_INTERNAL_ERROR (max_send_fragment=0) — no hang |
+| HTTP connect + raw send | ✅ Works |
+| SSL_connect (TLS 1.2) | ❌ `SSL_R_UNKNOWN_CIPHER_RETURNED` (248) — Google sends ServerHello but picks cipher we don't recognize |
+| SSL_connect (TLS 1.3) | ❌ `SSL_R_UNSUPPORTED_SSL_VERSION` (259) — `ssl_generate_session_id` rejects `s->version` (probably 0) |
 
-## Applies Fixes (committed in this session)
-1. **version after SSL_clear** — `ossl_ssl_connection_reset` now uses same logic as `tls1_clear`: if method->version == TLS_ANY_VERSION, set sc->version = TLS_MAX_VERSION_INTERNAL (TLS1_3_VERSION)
-2. **max_send_fragment fallback** — `ssl_get_max_send_fragment/split` default to SSL3_RT_MAX_PLAIN_LENGTH when field is 0
-3. **X25519-only group list** — AROS group list limited to just "X25519" to avoid failing on non-X25519 groups
-4. **buffer BIO skip on AROS** — `ssl_init_wbio_buffer` skipped on AROS; record layer uses socket BIO directly
-5. **key_share group_id check** — AROS add_key_share verifies group_id is X25519
+## Fixes Applied (this session)
 
-## Root Causes Discovered
-1. **max_send_fragment=0** — After SSL_clear, sc->max_send_fragment becomes 0. Probably zeroed by memset(&sc->s3,0,..) in ssl3_clear (called during SSL_new) which runs AFTER ossl_ssl_connection_new_int sets it at line 824. The fix in ssl_get_max_send_fragment handles this.
-2. **record version 0x10000** — SSL_clear → ossl_ssl_connection_reset sets `sc->version = s->method->version` which is TLS_ANY_VERSION=0x10000. This becomes the TLS record version header. Server drops connection. Fix: same logic as tls1_clear (use TLS_MAX_VERSION_INTERNAL).
-3. **buffer BIO never flushes** — ssl_init_wbio_buffer pushes BIO_f_buffer on wbio. Handshake writes go to buffer but are never flushed. State machine then transitions to MSG_FLOW_READING and blocks on recv() forever. Fix: skip buffer BIO on AROS.
-4. **BIO_write on socket BIO hangs with buffer BIO skipped** — Still under investigation. Raw send() works, but BIO_write → send() inside SSL_connect hangs. Needs further debugging.
-| httpget_simple (real AROS, legacy keygen) | ❓ Sent for testing |
+### Fix 4: ssl3_finish_mac bypass on AROS
+- **File:** openssl/ssl/s3_enc.c:249-254
+- `BIO_write` to memory BIO hangs on AROS (provider/mem issue). Bypassed with `#if defined(__AROS__)` that skips handshake hash accumulation.
 
-## Fixes Applied
+### Fix 5: TLS 1.3 → TLS 1.2 record version mapping
+- **File:** openssl/ssl/record/rec_layer_s3.c:1483-1491
+- `ssl_set_record_protocol_version` maps `TLS1_3_VERSION` to `TLS1_2_VERSION` for record layer (RFC 8446).
 
-### Fix 1: Simple group list for ssl_load_groups() on AROS
-- **File:** openssl/ssl/t1_lib.c:440-445
-- Groups: P-256, P-384, P-521, X25519, X448
-- Avoids hybrid PQC groups not in the fallback
+### Fix 6: X25519-only key share with full group list
+- **File:** openssl/ssl/statem/extensions_clnt.c:660-714
+- AROS `add_key_share` only generates key for X25519 (0x001D); non-X25519 groups are silently skipped.
+- Full group list restored in `t1_lib.c` for proper cipher suite negotiation.
 
-### Fix 2: ssl_generate_pkey_group() returns error on AROS
-- **File:** openssl/ssl/s3_lib.c:5401-5404
-- Key generation handled by add_key_share instead
+### Fix 7: SNI added to test
+- **File:** test/httpget_simple.c:69
+- Added `SSL_set_tlsext_host_name(ssl, "google.com")` — Google requires SNI.
 
-### Fix 3: AROS key share generation
-- **File:** openssl/ssl/statem/extensions_clnt.c:662-696
-- Uses EVP_PKEY_CTX_new_id + EVP_PKEY_keygen (legacy path)
-- LCG RNG avoids DRBG hang
+## Root Causes Discovered (July 16)
+1. **ssl3_finish_mac → BIO_write to memory BIO hangs** — The `handshake_dgst` memory BIO write (`BIO_write(s->s3.handshake_buffer, ...)`) hangs on AROS. Suspect underlying malloc/OPENSSL_zalloc issue.
+2. **Key share group mismatch** — AROS `add_key_share` always generated X25519 key but wrote whatever `group_id` was passed. First group in list (P-256, group 23) got an X25519 32-byte key → server sees malformed key_share.
+3. **`ssl_set_record_protocol_version` never called for TLS path** — Only called inside DTLS branch of `ssl_set_client_hello_version`. Record layer stays at `TLS_ANY_VERSION`.
+4. **rl->version = 0x10000 (TLS_ANY_VERSION)** — Record validation accepts any major-version-3 record, but the version never gets updated to the negotiated value.
 
-## Key Files
-- SESSION_LOG.md — Full session history and methods tried
-- METHODS_TRIED.md — Detailed list of every approach attempted
-- BUILD_STATUS.md — Build instructions and resolved issues
+## Remaining Issues
+1. **TLS 1.3: `ssl_generate_session_id` fails with `UNSUPPORTED_SSL_VERSION`** — `s->version` is probably 0 when `ssl_get_new_session(s, 1)` is called during ServerHello processing in `extensions.c:1004`. Root cause unknown.
+2. **TLS 1.2: Google picks cipher we don't recognize** — `ssl_get_cipher_by_char` returns NULL for the cipher Google selected. Possibly because Google chose a TLS 1.3 cipher despite our TLS 1.2 max.
+3. **`ssl3_digest_cached_records` may also hang** — Calls `EVP_DigestInit_ex`/`EVP_DigestUpdate` through provider layer, same issue as `ssl3_finish_mac`.
 
-## Key Files
-- SESSION_LOG.md — Full session history and methods tried
-- METHODS_TRIED.md — Detailed list of every approach attempted
-- BUILD_STATUS.md — Build instructions and resolved issues
-
-## USB
-```
-/media/serk118/C24B-10A6/toMiker/Libs/amissl_v362.library
-/media/serk118/C24B-10A6/toMiker/tests/httpget_simple
-```
-
-## Build Notes (July 15)
+## Build Notes
 - Clean build takes 10+ min (OpenSSL reconfigures)
-- **Incremental builds on dirty directories produce corrupted libraries on AROS** — always clean build!
-- After modifying SSL source, the AmiSSL Makefile detects changes, recompiles, and re-links
+- **Incremental builds on dirty directories produce corrupted libraries on AROS** — always clean build! (`make clean` first)
+- After modifying SSL source, the Makefile detects changes and recompiles incrementally.
+- Incremental build of just the modified SSL files is fast (~30s for a few .c files).
 
-## To Resume Later
+## To Resume
 1. Build: `export PATH="..." && export SYSROOT="..." && make OS=aros-x86_64 CROSS_PREFIX=x86_64-aros- DEBUG=`
 2. If OpenSSL build fails (Makefile out of date), run `make` again
 3. Deploy: `cp build_aros-x86_64/amissl_v362.library ~/.../Libs/ && cp build_aros-x86_64/httpget_simple ~/.../tests/`
@@ -88,14 +74,8 @@ cat test_output.txt
 5. Check: `cat test_output.txt`
 
 ## Next Session Priority
-Investigate why SSL_connect still hangs after:
-- Version fix (sc->version = TLS1_3_VERSION) ✓
-- max_send_fragment fallback ✓  
-- buffer BIO flush added ✓
+1. **Fix `s->version` being 0 in `ssl_generate_session_id`** — Investigate why version is not set when `ssl_get_new_session(s, 1)` is called from `extensions.c:1004` during ServerHello processing.
+2. **Fix `ssl3_digest_cached_records`** — May also hang via `EVP_DigestInit_ex`/`EVP_DigestUpdate` on AROS (same provider issue as `ssl3_finish_mac`). May need similar `#if defined(__AROS__)` bypass.
+3. **Fix TLS 1.2 cipher mismatch** — Google may be picking TLS 1.3 cipher suites because we include them in the ClientHello even with TLS 1.2 max. Filter them out or use explicit TLS 1.2 method.
 
-Hypothesis: BIO_write in tls_retry_write_records may be failing silently
-(BIO_flush returns error ignored), or the buffer BIO is still buffering
-without flushing. Check if BIO_flush return value is being ignored in
-ssl3_do_write (line 99 of statem_lib.c).
-
-All changes committed at SHA `599e366`.
+All changes committed at SHA `9aa635a`.
