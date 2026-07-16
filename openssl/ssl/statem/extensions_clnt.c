@@ -658,11 +658,8 @@ static int add_key_share(SSL_CONNECTION *s, WPACKET *pkt, unsigned int group_id,
         key_share_key = s->s3.tmp.ks_pkey[loop_num];
     } else {
 #if defined(__AROS__)
-        /*
-         * AROS: pre-computed X25519 key share (RFC 7748 §6.1).
-         * Note: group_id is checked in t1_lib.c via limited group list.
-         */
-        {
+        if (group_id == 0x001D /* X25519 */) {
+            /* AROS: pre-computed X25519 key share (RFC 7748 §6.2). */
             static const unsigned char privkey[32] = {
                 0x77,0x07,0x6d,0x0a,0x73,0x18,0xa5,0x7d,
                 0x3c,0x16,0xc1,0x72,0x51,0xb2,0x66,0x45,
@@ -702,13 +699,22 @@ static int add_key_share(SSL_CONNECTION *s, WPACKET *pkt, unsigned int group_id,
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
             return 0;
         aros_key_done: ;
+        } else {
+            /* Non-X25519 groups: let the caller fall through to the
+             * key_share_key==NULL && encoded_pubkey==NULL check which
+             * will cause this entry to be silently skipped. */
         }
 #else
         key_share_key = ssl_generate_pkey_group(s, group_id);
 #endif
         if (key_share_key == NULL && encoded_pubkey == NULL) {
+#if defined(__AROS__)
+            /* Skip groups we don't have a key share for */
+            return 1;
+#else
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
             return 0;
+#endif
         }
     }
 

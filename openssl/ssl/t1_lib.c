@@ -439,7 +439,7 @@ int ssl_load_groups(SSL_CTX *ctx)
      * in the fallback group list. */
 #if defined(__AROS__)
     return SSL_CTX_set1_groups_list(ctx,
-        "X25519");
+        "P-256:P-384:P-521:X25519:X448");
 #else
     return SSL_CTX_set1_groups_list(ctx, TLS_DEFAULT_GROUP_LIST);
 #endif

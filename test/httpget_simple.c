@@ -54,7 +54,6 @@ int main(void)
     EVP_add_digest(EVP_sha256());EVP_add_digest(EVP_sha384());
     EVP_add_cipher(EVP_aes_256_gcm());EVP_add_cipher(EVP_aes_128_gcm());EVP_add_cipher(EVP_chacha20_poly1305());
     ctx=SSL_CTX_new(TLS_client_method());
-    SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
     { struct hostent *he=gethostbyname("google.com");
       fd=socket(AF_INET,SOCK_STREAM,0);
       struct sockaddr_in sa; sa.sin_family=AF_INET; sa.sin_port=htons(443);
