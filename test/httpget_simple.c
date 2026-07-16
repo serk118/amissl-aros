@@ -62,7 +62,10 @@ int main(void)
       int cr = connect(fd,(struct sockaddr*)&sa,sizeof(sa));
       Printf("connect=%d errno=%d\n", cr, errno); Flush(Output()); }
     Printf("Connected\n"); Flush(Output());
-    ssl=SSL_new(ctx); SSL_set_fd(ssl,fd); SSL_set_connect_state(ssl);
+    ssl=SSL_new(ctx);
+    SSL_set_fd(ssl,fd);
+    SSL_set_connect_state(ssl);
+    SSL_set_tlsext_host_name(ssl, "google.com");
     { int r=SSL_connect(ssl);
       Printf("r=%d err=%d peek=0x%08lx\n",r,SSL_get_error(ssl,r),ERR_peek_error());
       unsigned long e; while((e=ERR_get_error())!=0) Printf("ERR=%s\n",ERR_error_string(e,NULL)); }

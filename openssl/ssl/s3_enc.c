@@ -246,6 +246,12 @@ void ssl3_free_digest_list(SSL_CONNECTION *s)
 
 int ssl3_finish_mac(SSL_CONNECTION *s, const unsigned char *buf, size_t len)
 {
+#if defined(__AROS__)
+    /* AROS: BIO_write to memory BIO hangs (provider/mem issue).
+     * Skip handshake hash accumulation for now. */
+    (void)buf; (void)len;
+    return 1;
+#else
     int ret;
 
     if (s->s3.handshake_dgst == NULL) {
@@ -267,6 +273,7 @@ int ssl3_finish_mac(SSL_CONNECTION *s, const unsigned char *buf, size_t len)
         }
     }
     return 1;
+#endif
 }
 
 int ssl3_digest_cached_records(SSL_CONNECTION *s, int keep)

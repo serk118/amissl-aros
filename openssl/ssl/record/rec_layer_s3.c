@@ -1480,11 +1480,16 @@ int ssl_set_new_record_layer(SSL_CONNECTION *s, int version,
 
 int ssl_set_record_protocol_version(SSL_CONNECTION *s, int vers)
 {
+    int rl_vers = vers;
+    int rret, wret;
+
     if (!ossl_assert(s->rlayer.rrlmethod != NULL)
         || !ossl_assert(s->rlayer.wrlmethod != NULL))
         return 0;
-    s->rlayer.rrlmethod->set_protocol_version(s->rlayer.rrl, s->version);
-    s->rlayer.wrlmethod->set_protocol_version(s->rlayer.wrl, s->version);
-
-    return 1;
+    /* TLS 1.3 uses TLS 1.2 record layer framing (RFC 8446) */
+    if (rl_vers == TLS1_3_VERSION)
+        rl_vers = TLS1_2_VERSION;
+    rret = s->rlayer.rrlmethod->set_protocol_version(s->rlayer.rrl, rl_vers);
+    wret = s->rlayer.wrlmethod->set_protocol_version(s->rlayer.wrl, rl_vers);
+    return rret && wret;
 }
