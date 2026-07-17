@@ -91,13 +91,11 @@ CERT *ssl_cert_new(size_t ssl_pkey_num)
     return ret;
 }
 
-/* Debug helpers - inline asm, write to file via open()/write() syscalls */
 static long __ssl_dbg_fd2 = -1;
 #define DBG_OPEN2() do { \
     if (__ssl_dbg_fd2 < 0) { \
         long __f; \
         static const char __fn[] = "/tmp/dbg.txt"; \
-        __asm__ __volatile__("mov $2,%%rax;lea %1,%%rdi;mov $0x441,%%rsi;mov $0x1b6,%%rdx;syscall" \
             : "=a"(__f) : "m"(__fn) : "rdi","rsi","rdx","rcx","r11","memory"); \
         __ssl_dbg_fd2 = __f; \
     } \

@@ -5463,29 +5463,27 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
         goto err;
 
 #if defined(__AROS__)
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC1\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
-#endif
+    /* AROS: EVP_PKEY_Q_keygen hangs through provider layer.
+     * Skip directly to EC_KEY fallback. */
+    pkey = NULL;
+#else
     pkey = EVP_PKEY_Q_keygen(sctx->libctx, sctx->propq, ginf->realname);
-#if defined(__AROS__)
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(pkey ? "EC2\n" : "EC3\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
     if (pkey == NULL) {
         int nid = tls1_group_id2nid(id, 0);
 #if defined(__AROS__)
-        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC4\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
         if (nid != NID_undef) {
 #if defined(__AROS__)
-            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC5\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
             EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
 #if defined(__AROS__)
-            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(ec ? "EC6\n" : "EC7\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
             if (ec != NULL) {
                 if (EC_KEY_generate_key(ec)) {
 #if defined(__AROS__)
-                    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC8\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+                    /* AROS: EC_KEY_generate_key uses LCG RNG
+                     * (set in test), should not hang.            */
 #endif
                     pkey = EVP_PKEY_new();
                     if (pkey != NULL)
@@ -5494,14 +5492,12 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
                         EC_KEY_free(ec);
                 } else {
 #if defined(__AROS__)
-                    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC9\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
                     EC_KEY_free(ec);
                 }
             }
         } else if (ginf->realname != NULL) {
 #if defined(__AROS__)
-            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("ECA\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
             int keytype = NID_undef;
             size_t keylen = 0;
@@ -5521,7 +5517,6 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
         }
     }
 #if defined(__AROS__)
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(pkey ? "ECB\n" : "ECC\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 #endif
 
 err:

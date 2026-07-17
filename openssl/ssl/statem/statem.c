@@ -671,7 +671,6 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                  */
                 ret = dtls_get_message_body(s, &len);
             } else {
-                { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("RD\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
                 ret = tls_get_message_body(s, &len);
             }
             if (ret == 0) {
@@ -684,7 +683,6 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                 return SUB_STATE_ERROR;
             }
-            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("PM\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
             ret = process_message(s, &pkt);
 
             /* Discard the packet data */

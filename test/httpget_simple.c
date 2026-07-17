@@ -8,6 +8,7 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/ssl.h>
+
 #if defined(__AROS__)
 # include <proto/socket.h>
 # include <netinet/in.h>

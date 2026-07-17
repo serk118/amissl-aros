@@ -219,7 +219,6 @@ void ssl3_cleanup_key_block(SSL_CONNECTION *s)
 
 int ssl3_init_finished_mac(SSL_CONNECTION *s)
 {
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("INIT\n"), "d"(5) : "rcx","r11","memory"); (void)_w; }
     BIO *buf = BIO_new(BIO_s_mem());
 
     if (buf == NULL) {

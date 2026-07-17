@@ -191,7 +191,6 @@ void *CRYPTO_malloc(size_t num, const char *file, int line)
     void *ptr;
 
     INCREMENT(malloc_count);
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CM\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
     if (malloc_impl != CRYPTO_malloc) {
         ptr = malloc_impl(num, file, line);
         if (ptr != NULL || num == 0)

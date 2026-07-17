@@ -154,11 +154,9 @@ int ossl_x509_set0_libctx(X509 *x, OSSL_LIB_CTX *libctx, const char *propq)
 
 X509 *X509_new_ex(OSSL_LIB_CTX *libctx, const char *propq)
 {
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("XN1\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     X509 *cert = NULL;
 
     cert = (X509 *)ASN1_item_new_ex(X509_it(), libctx, propq);
-    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("XN2\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     if (!ossl_x509_set0_libctx(cert, libctx, propq)) {
         X509_free(cert);
         cert = NULL;
