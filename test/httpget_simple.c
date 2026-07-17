@@ -40,13 +40,6 @@ static RAND_METHOD lcg_rand = {
 long __stack = 1024 * 1024;
 struct Library *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 
-static void wm(const char *s, long n)
-{
-    long _w;
-    __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(s), "d"(n) : "rcx","r11","memory");
-    (void)_w;
-}
-
 int main(void)
 {
     SSL_CTX *ctx; SSL *ssl; int fd;
@@ -75,29 +68,18 @@ int main(void)
     SSL_set_fd(ssl,fd);
     SSL_set_connect_state(ssl);
     SSL_set_tlsext_host_name(ssl, "google.com");
-    wm("B4\n",3);
     { int r=SSL_connect(ssl);
-      wm("AF\n",3);
-      wm("EP\n",3);
       unsigned long e=ERR_peek_error();
-      wm("GE\n",3);
       int se=SSL_get_error(ssl,r);
-      wm("PR\n",3);
       Printf("r=%d err=%d peek=0x%08lx\n",r,se,e);
       Flush(Output());
-      wm("P2\n",3);
       Printf("LIB=%d R=0x%08x\n",ERR_GET_LIB(e),ERR_GET_REASON(e));
       Flush(Output());
-      wm("EL\n",3);
       while((e=ERR_get_error())!=0) {
-          wm("ES\n",3);
           Printf("ERR=%s\n",ERR_error_string(e,NULL));
           Flush(Output());
       }
-      wm("DN\n",3);
     }
-    wm("FR\n",3);
     SSL_free(ssl); SSL_CTX_free(ctx); CloseSocket(fd);
-    wm("EX\n",3);
     return 0;
 }

@@ -2,11 +2,11 @@
 """Fix R_X86_64_PC32 addends in AROS ET_REL library.
 
 The AROS Exec ELF loader uses formula:  *(ULONG*)p = s + addend - p
-This is correct for PLT32 (addend=-4) but wrong for PC32 (addend=0)
-because x86-64 displacement is relative to next instruction (p+4).
+This is correct for PLT32 (addend=-4) but WRONG for PC32 because
+x86-64 displacement is relative to next instruction (p+4), not p.
 
-Fix: change PC32 addend from 0 to -4 so the kernel formula produces
-the correct result:  s + (-4) - p  ==  s - (p+4)
+Fix: subtract 4 from each PC32 addend so the formula becomes:
+  s + (addend-4) - p  ==  s + addend - p - 4  ==  s + addend - (p+4)  ✓
 """
 import struct, sys, os
 
@@ -16,11 +16,11 @@ with open(path, 'rb') as f:
 
 # Parse ELF header
 e_shoff = struct.unpack_from('<Q', data, 40)[0]
-e_shnum = struct.unpack_from('<H', data, 60)[0]
 e_shentsize = struct.unpack_from('<H', data, 58)[0]
+e_shnum = struct.unpack_from('<H', data, 60)[0]
 e_shstrndx = struct.unpack_from('<H', data, 62)[0]
 
-# Parse section headers
+# Parse all section headers
 secs = []
 for i in range(e_shnum):
     off = e_shoff + i * e_shentsize
@@ -45,16 +45,13 @@ def sec_name(i):
     return data[off:off+60].split(b'\x00')[0].decode('latin-1')
 
 # Find all SHT_RELA sections
-rela_secs = []
-for i, s in enumerate(secs):
-    if s['type'] == 4:  # SHT_RELA
-        name = sec_name(i)
-        target = sec_name(s['info'])
-        rela_secs.append((name, target, s))
-
 total = 0
 fixed = 0
-for rname, tname, s in rela_secs:
+for i, s in enumerate(secs):
+    if s['type'] != 4:  # SHT_RELA
+        continue
+    name = sec_name(i)
+    target = sec_name(s['info'])
     num = s['size'] // s['entsize']
     for j in range(num):
         off = s['offset'] + j * s['entsize']
@@ -65,14 +62,16 @@ for rname, tname, s in rela_secs:
         
         if r_type == 2:  # R_X86_64_PC32
             total += 1
-            if r_addend != -4:
-                struct.pack_into('<q', data, off + 16, -4)
-                fixed += 1
+            # Subtract 4 from the addend to compensate for the missing -4 in the formula
+            new_addend = r_addend - 4
+            struct.pack_into('<q', data, off + 16, new_addend)
+            fixed += 1
 
-print(f"PC32 relocs: {total} total, {fixed} addend fixes applied")
+print(f"PC32 relocs: {total} total, {fixed} addends adjusted (-4 each)")
 
-out = path + ".fixed"
+out = path + ".fixed" if not path.endswith('.fixed') else path
 with open(out, 'wb') as f:
     f.write(data)
 os.chmod(out, 0o755)
 print(f"Written: {out}")
+print(f"Original backup: {path}.orig (if exists)")
