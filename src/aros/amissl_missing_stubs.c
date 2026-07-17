@@ -98,7 +98,10 @@ int LIB_ossl_crypto_thread_native_perform_join(struct Library * _base, void * __
 void *(CRYPTO_malloc)(size_t num, const char *file, int line)
 {
     (void)file; (void)line;
-    return AllocVec(num, MEMF_ANY);
+    void *p = AllocVec(num, MEMF_ANY);
+    if (p == NULL && num > 0)
+        p = malloc(num);
+    return p;
 }
 
 void (CRYPTO_free)(void *ptr, const char *file, int line)
@@ -109,11 +112,14 @@ void (CRYPTO_free)(void *ptr, const char *file, int line)
 
 void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
 {
+    (void)file; (void)line;
     void *p = AllocVec(num, MEMF_ANY);
     if (p != NULL) {
         unsigned char *cp = (unsigned char *)p;
         size_t n;
         for (n = 0; n < num; n++) cp[n] = 0;
+    } else if (num > 0) {
+        p = calloc(1, num);
     }
     return p;
 }
@@ -121,10 +127,24 @@ void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
 void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
 {
     (void)file; (void)line;
-    if (addr == NULL) return AllocVec(num, MEMF_ANY);
+    if (addr == NULL) {
+        void *p = AllocVec(num, MEMF_ANY);
+        if (p == NULL && num > 0)
+            p = malloc(num);
+        return p;
+    }
     if (num == 0) { FreeVec(addr); return NULL; }
     void *p = AllocVec(num, MEMF_ANY);
-    if (p == NULL) return NULL;
+    if (p == NULL) {
+        p = malloc(num);
+        if (p == NULL) return NULL;
+        unsigned char *src = (unsigned char *)addr;
+        unsigned char *dst = (unsigned char *)p;
+        size_t i;
+        for (i = 0; i < num; i++) dst[i] = src[i];
+        FreeVec(addr);
+        return p;
+    }
     unsigned char *src = (unsigned char *)addr;
     unsigned char *dst = (unsigned char *)p;
     size_t i;
@@ -133,10 +153,10 @@ void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
     return p;
 }
 
+
+
 /* Strong alias for SocketBase — used by libcmt GETSOCKET() fallback */
 struct Library *__amissl_global_SocketBase = NULL;
-
-
 
 /* SocketBase is provided by the AROS bsdsocket.library stub system.
  * Do NOT define it here — let the linker resolve it from -lamiga or -larossupport.

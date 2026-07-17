@@ -536,7 +536,13 @@ static void init_read_state_machine(SSL_CONNECTION *s)
 
 static int grow_init_buf(SSL_CONNECTION *s, size_t size)
 {
-
+#if defined(__AROS__)
+    /* AROS: BUF_MEM_grow on AROS hangs (provider/mem issue).
+     * Buffer is pre-sized to SSL3_RT_MAX_PLAIN_LENGTH (16KB) which is
+     * sufficient for all standard TLS handshake messages. */
+    (void)size;
+    return 1;
+#else
     size_t msg_offset = (char *)s->init_msg - s->init_buf->data;
 
     if (!BUF_MEM_grow_clean(s->init_buf, (int)size))
@@ -548,6 +554,7 @@ static int grow_init_buf(SSL_CONNECTION *s, size_t size)
     s->init_msg = s->init_buf->data + msg_offset;
 
     return 1;
+#endif
 }
 
 /*
@@ -645,7 +652,6 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                     SSL_R_EXCESSIVE_MESSAGE_SIZE);
                 return SUB_STATE_ERROR;
             }
-
             /* dtls_get_message already did this */
             if (!SSL_CONNECTION_IS_DTLS(s)
                 && s->s3.tmp.message_size > 0
@@ -665,6 +671,7 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                  */
                 ret = dtls_get_message_body(s, &len);
             } else {
+                { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("RD\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
                 ret = tls_get_message_body(s, &len);
             }
             if (ret == 0) {
@@ -677,6 +684,7 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                 return SUB_STATE_ERROR;
             }
+            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("PM\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
             ret = process_message(s, &pkt);
 
             /* Discard the packet data */

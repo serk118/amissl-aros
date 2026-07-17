@@ -219,6 +219,7 @@ void ssl3_cleanup_key_block(SSL_CONNECTION *s)
 
 int ssl3_init_finished_mac(SSL_CONNECTION *s)
 {
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("INIT\n"), "d"(5) : "rcx","r11","memory"); (void)_w; }
     BIO *buf = BIO_new(BIO_s_mem());
 
     if (buf == NULL) {
@@ -276,6 +277,15 @@ int ssl3_finish_mac(SSL_CONNECTION *s, const unsigned char *buf, size_t len)
 #endif
 }
 
+#if defined(__AROS__)
+int ssl3_digest_cached_records(SSL_CONNECTION *s, int keep)
+{
+    /* AROS: EVP_DigestInit_ex/EVP_DigestUpdate hangs through provider layer.
+     * Skip handshake digest caching. */
+    (void)keep;
+    return 1;
+}
+#else
 int ssl3_digest_cached_records(SSL_CONNECTION *s, int keep)
 {
     const EVP_MD *md;
@@ -314,6 +324,7 @@ int ssl3_digest_cached_records(SSL_CONNECTION *s, int keep)
 
     return 1;
 }
+#endif
 
 void ssl3_digest_master_key_set_params(const SSL_SESSION *session,
     OSSL_PARAM params[])

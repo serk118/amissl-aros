@@ -104,6 +104,12 @@ extern "C" {
 
 /* Macros for start and end of ASN1_ITEM definition */
 
+/* NOTE: the AROS x86_64 Exec ELF loader does NOT process
+ * R_X86_64_PC32 cross-section relocations ("m"(var)+leaq),
+ * and R_X86_64_32S ("p"(&var)+mov) also appears unhandled.
+ * String literals work via R_X86_64_32 ("m"(str)+movl), so
+ * we use a 32-bit movl to get that relocation type instead.   */
+
 #define ASN1_ITEM_start(itname)        \
     const ASN1_ITEM *itname##_it(void) \
     {                                  \
@@ -112,10 +118,18 @@ extern "C" {
 #define static_ASN1_ITEM_start(itname) \
     static ASN1_ITEM_start(itname)
 
-#define ASN1_ITEM_end(itname) \
-    }                         \
-    ;                         \
-    return &local_it;         \
+#define ASN1_ITEM_end(itname)          \
+    }                                  \
+    ;                                  \
+    {                                  \
+        unsigned long __addr;          \
+        const ASN1_ITEM *__r;          \
+        __asm__("movl %1, %k0"         \
+                : "=r"(__addr)         \
+                : "p"(&local_it));     \
+        __r = (const ASN1_ITEM *)__addr; \
+        return __r;                    \
+    }                                  \
     }
 
 /* Macros to aid ASN1 template writing */

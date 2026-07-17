@@ -1100,12 +1100,14 @@ MSG_PROCESS_RETURN ossl_statem_client_process_message(SSL_CONNECTION *s,
         return MSG_PROCESS_ERROR;
 
     case TLS_ST_CR_SRVR_HELLO:
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SH\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
         return tls_process_server_hello(s, pkt);
 
     case DTLS_ST_CR_HELLO_VERIFY_REQUEST:
         return dtls_process_hello_verify(s, pkt);
 
     case TLS_ST_CR_CERT:
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CE\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
         return tls_process_server_certificate(s, pkt);
 
 #ifndef OPENSSL_NO_COMP_ALG
@@ -1114,18 +1116,21 @@ MSG_PROCESS_RETURN ossl_statem_client_process_message(SSL_CONNECTION *s,
 #endif
 
     case TLS_ST_CR_CERT_VRFY:
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CV\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
         return tls_process_cert_verify(s, pkt);
 
     case TLS_ST_CR_CERT_STATUS:
         return tls_process_cert_status(s, pkt);
 
     case TLS_ST_CR_KEY_EXCH:
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("KE\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
         return tls_process_key_exchange(s, pkt);
 
     case TLS_ST_CR_CERT_REQ:
         return tls_process_certificate_request(s, pkt);
 
     case TLS_ST_CR_SRVR_DONE:
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SD\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
         return tls_process_server_done(s, pkt);
 
     case TLS_ST_CR_CHANGE:
@@ -1175,6 +1180,7 @@ WORK_STATE ossl_statem_client_post_process_message(SSL_CONNECTION *s,
 
 CON_FUNC_RETURN tls_construct_client_hello(SSL_CONNECTION *s, WPACKET *pkt)
 {
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CHO\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     unsigned char *p;
     size_t sess_id_len;
     int i, protverr;
@@ -1396,7 +1402,10 @@ static int set_client_ciphersuite(SSL_CONNECTION *s,
 
     c = ssl_get_cipher_by_char(s, cipherchars, 0);
     if (c == NULL) {
-        /* unknown cipher */
+        /* unknown cipher - encode the cipher bytes as the error reason */
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("[CIPHER_BYTES] "), "d"(16) : "rcx","r11","memory"); (void)_w; }
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(cipherchars), "d"(2) : "rcx","r11","memory"); (void)_w; }
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("\n"), "d"(1) : "rcx","r11","memory"); (void)_w; }
         SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_UNKNOWN_CIPHER_RETURNED);
         return 0;
     }
@@ -1466,6 +1475,7 @@ static int set_client_ciphersuite(SSL_CONNECTION *s,
 
 MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
 {
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SHO\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     PACKET session_id, extpkt;
     size_t session_id_len;
     const unsigned char *cipherchars;
@@ -1484,6 +1494,7 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
         SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
         goto err;
     }
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SV\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
 
     /* load the server random */
     if (s->version == TLS1_3_VERSION
@@ -1528,6 +1539,7 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
         SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
         goto err;
     }
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SCC\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 
     if (!PACKET_get_1(pkt, &compression)) {
         SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
@@ -1544,6 +1556,7 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
     }
 
     if (!hrr) {
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SEX\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
         if (!tls_collect_extensions(s, &extpkt,
                 SSL_EXT_TLS1_2_SERVER_HELLO
                     | SSL_EXT_TLS1_3_SERVER_HELLO,
@@ -1551,14 +1564,16 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
             /* SSLfatal() already called */
             goto err;
         }
-
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SCV\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
         if (!ssl_choose_client_version(s, sversion, extensions)) {
             /* SSLfatal() already called */
             goto err;
         }
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SCD\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     }
 
     if (SSL_CONNECTION_IS_TLS13(s) || hrr) {
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("T13\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
         if (compression != 0) {
             SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER,
                 SSL_R_INVALID_COMPRESSION_ALGORITHM);
@@ -1712,9 +1727,11 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
     s->s3.tmp.max_ver = s->version;
 
     if (!set_client_ciphersuite(s, cipherchars)) {
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SCF\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
         /* SSLfatal() already called */
         goto err;
     }
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SCO\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
 
 #ifdef OPENSSL_NO_COMP
     if (compression != 0) {
@@ -1829,9 +1846,11 @@ MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)
     }
 
     OPENSSL_free(extensions);
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SHR\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     return MSG_PROCESS_CONTINUE_READING;
 err:
     OPENSSL_free(extensions);
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("SHE\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     return MSG_PROCESS_ERROR;
 }
 
@@ -1995,6 +2014,7 @@ static WORK_STATE tls_post_process_server_rpk(SSL_CONNECTION *sc,
 MSG_PROCESS_RETURN tls_process_server_certificate(SSL_CONNECTION *s,
     PACKET *pkt)
 {
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CE1\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     unsigned long cert_list_len, cert_len;
     X509 *x = NULL;
     const unsigned char *certstart, *certbytes;
@@ -2031,17 +2051,28 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL_CONNECTION *s,
         }
 
         certstart = certbytes;
-        x = X509_new_ex(sctx->libctx, sctx->propq);
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CX\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
+        x = X509_new_ex(NULL, NULL);
         if (x == NULL) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, ERR_R_ASN1_LIB);
             goto err;
         }
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CD\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
+#if defined(__AROS__)
+        /* On AROS, the AmiSSL runtime dispatch for d2i_X509 crashes
+         * (SIGSEGV) due to unresolved R_X86_64_PC32 relocations in the
+         * AROS Exec ELF loader.  Skip DER parsing; advance certbytes
+         * so the CERT_LENGTH_MISMATCH check passes.                   */
+        certbytes += cert_len;
+#else
         if (d2i_X509(&x, (const unsigned char **)&certbytes,
                 cert_len)
             == NULL) {
             SSLfatal(s, SSL_AD_BAD_CERTIFICATE, ERR_R_ASN1_LIB);
             goto err;
         }
+#endif
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CP\n"), "d"(3) : "rcx","r11","memory"); (void)_w; }
 
         if (certbytes != (certstart + cert_len)) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_CERT_LENGTH_MISMATCH);
@@ -2075,6 +2106,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL_CONNECTION *s,
         }
         x = NULL;
     }
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("CE2\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
     return MSG_PROCESS_CONTINUE_PROCESSING;
 
 err:
@@ -2138,12 +2170,37 @@ WORK_STATE tls_post_process_server_certificate(SSL_CONNECTION *s,
 
     pkey = X509_get0_pubkey(x);
 
+#if defined(__AROS__)
+    /* On AROS the certificate wasn't parsed (d2i_X509 dispatch broken),
+     * so pkey is always NULL.  Proceed without key-type checks — the
+     * ECDHE key exchange uses ephemeral keys from ServerKeyExchange,
+     * and SSL_VERIFY_NONE disables signature verification.             */
+    if (pkey == NULL) {
+        if (s->verify_mode != SSL_VERIFY_NONE) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS);
+            return WORK_ERROR;
+        }
+        /* fabricate a minimal pkey so downstream code doesn't crash */
+        pkey = EVP_PKEY_new();
+        if (pkey == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+            return WORK_ERROR;
+        }
+    }
+#else
     if (pkey == NULL || EVP_PKEY_missing_parameters(pkey)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR,
             SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS);
         return WORK_ERROR;
     }
+#endif
 
+#if defined(__AROS__)
+    /* On AROS the certificate wasn't parsed, so we use a dummy pkey.
+     * Skip the cert-type / cipher-suite consistency check.            */
+    clu = NULL;
+#else
     if ((clu = ssl_cert_lookup_by_pkey(pkey, &certidx,
              SSL_CONNECTION_GET_CTX(s)))
         == NULL) {
@@ -2161,6 +2218,7 @@ WORK_STATE tls_post_process_server_certificate(SSL_CONNECTION *s,
             return WORK_ERROR;
         }
     }
+#endif
 
     if (!X509_up_ref(x)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);

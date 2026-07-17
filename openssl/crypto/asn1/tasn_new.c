@@ -130,7 +130,11 @@ int asn1_item_embed_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int embed,
             }
         }
         if (embed) {
-            memset(*pval, 0, it->size);
+            if (*pval == NULL) {
+                *pval = OPENSSL_zalloc(it->size);
+                if (*pval == NULL)
+                    return 0;
+            }
         } else {
             *pval = OPENSSL_zalloc(it->size);
             if (*pval == NULL)

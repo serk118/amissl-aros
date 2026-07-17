@@ -4724,16 +4724,32 @@ int SSL_CTX_set_tlsext_ticket_key_evp_cb(SSL_CTX *ctx, int (*fp)(SSL *, unsigned
     return 1;
 }
 
+static const SSL_CIPHER *ssl3_get_cipher_by_id_linear(const SSL_CIPHER *table, int num, uint32_t id)
+{
+    int i;
+    for (i = 0; i < num; i++) {
+        if (table[i].id == id)
+            return &table[i];
+    }
+    return NULL;
+}
+
 const SSL_CIPHER *ssl3_get_cipher_by_id(uint32_t id)
 {
     SSL_CIPHER c;
     const SSL_CIPHER *cp;
 
     c.id = id;
+    cp = OBJ_bsearch_ssl_cipher_id(&c, ssl3_ciphers, SSL3_NUM_CIPHERS);
+    if (cp != NULL)
+        return cp;
+    cp = ssl3_get_cipher_by_id_linear(ssl3_ciphers, SSL3_NUM_CIPHERS, id);
+    if (cp != NULL)
+        return cp;
     cp = OBJ_bsearch_ssl_cipher_id(&c, tls13_ciphers, TLS13_NUM_CIPHERS);
     if (cp != NULL)
         return cp;
-    cp = OBJ_bsearch_ssl_cipher_id(&c, ssl3_ciphers, SSL3_NUM_CIPHERS);
+    cp = ssl3_get_cipher_by_id_linear(tls13_ciphers, TLS13_NUM_CIPHERS, id);
     if (cp != NULL)
         return cp;
     return OBJ_bsearch_ssl_cipher_id(&c, ssl3_scsvs, SSL3_NUM_SCSVS);
@@ -5446,21 +5462,67 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
     if (ginf == NULL)
         goto err;
 
-    pctx = EVP_PKEY_CTX_new_from_name(sctx->libctx, ginf->algorithm,
-        sctx->propq);
-
-    if (pctx == NULL)
-        goto err;
-    if (EVP_PKEY_paramgen_init(pctx) <= 0)
-        goto err;
-    if (EVP_PKEY_CTX_set_group_name(pctx, ginf->realname) <= 0) {
-        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
-        goto err;
+#if defined(__AROS__)
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC1\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+    pkey = EVP_PKEY_Q_keygen(sctx->libctx, sctx->propq, ginf->realname);
+#if defined(__AROS__)
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(pkey ? "EC2\n" : "EC3\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+    if (pkey == NULL) {
+        int nid = tls1_group_id2nid(id, 0);
+#if defined(__AROS__)
+        { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC4\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+        if (nid != NID_undef) {
+#if defined(__AROS__)
+            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC5\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+            EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
+#if defined(__AROS__)
+            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(ec ? "EC6\n" : "EC7\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+            if (ec != NULL) {
+                if (EC_KEY_generate_key(ec)) {
+#if defined(__AROS__)
+                    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC8\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+                    pkey = EVP_PKEY_new();
+                    if (pkey != NULL)
+                        EVP_PKEY_assign_EC_KEY(pkey, ec);
+                    else
+                        EC_KEY_free(ec);
+                } else {
+#if defined(__AROS__)
+                    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("EC9\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+                    EC_KEY_free(ec);
+                }
+            }
+        } else if (ginf->realname != NULL) {
+#if defined(__AROS__)
+            { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"("ECA\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
+            int keytype = NID_undef;
+            size_t keylen = 0;
+            if (strcmp(ginf->realname, "X25519") == 0) {
+                keytype = EVP_PKEY_X25519;
+                keylen = 32;
+            } else if (strcmp(ginf->realname, "X448") == 0) {
+                keytype = EVP_PKEY_X448;
+                keylen = 56;
+            }
+            if (keytype != NID_undef && keylen > 0) {
+                unsigned char privkey[56];
+                if (RAND_priv_bytes(privkey, (int)keylen))
+                    pkey = EVP_PKEY_new_raw_private_key(keytype, NULL,
+                        privkey, keylen);
+            }
+        }
     }
-    if (EVP_PKEY_paramgen(pctx, &pkey) <= 0) {
-        EVP_PKEY_free(pkey);
-        pkey = NULL;
-    }
+#if defined(__AROS__)
+    { long _w; __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(1), "S"(pkey ? "ECB\n" : "ECC\n"), "d"(4) : "rcx","r11","memory"); (void)_w; }
+#endif
 
 err:
     EVP_PKEY_CTX_free(pctx);

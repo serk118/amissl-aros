@@ -5466,8 +5466,12 @@ AROS_LIBFUNC_EXIT
    is always available. */
 void *(CRYPTO_malloc)(size_t num, const char *file, int line)
 {
+    void *p;
     (void)file; (void)line;
-    return AllocVec(num, MEMF_ANY);
+    p = AllocVec(num, MEMF_ANY);
+    if (p == NULL && num > 0)
+        p = malloc(num);
+    return p;
 }
 
 /* Also override CRYPTO_free and CRYPTO_zalloc similarly */
@@ -5482,10 +5486,12 @@ void (CRYPTO_free)(void *ptr, const char *file, int line)
 void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
 {
     void *p = (CRYPTO_malloc)(num, file, line);
-    if (p != NULL) {
-        unsigned char *cp = (unsigned char *)p;
-        size_t n;
-        for (n = 0; n < num; n++) cp[n] = 0;
+    if (p != NULL && num > 0) {
+        memset(p, 0, num);
+    } else if (p == NULL && num > 0) {
+        /* AllocVec may fail for very small sizes on some AROS builds.
+           Fall back to calloc as a workaround. */
+        p = calloc(1, num);
     }
     return p;
 }
