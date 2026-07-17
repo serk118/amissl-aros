@@ -2135,27 +2135,15 @@ WORK_STATE tls_post_process_server_certificate(SSL_CONNECTION *s,
      */
     x = sk_X509_value(s->session->peer_chain, 0);
 
-    pkey = X509_get0_pubkey(x);
-
 #if defined(__AROS__)
-    /* On AROS the certificate wasn't parsed (d2i_X509 dispatch broken),
-     * so pkey is always NULL.  Proceed without key-type checks — the
-     * ECDHE key exchange uses ephemeral keys from ServerKeyExchange,
-     * and SSL_VERIFY_NONE disables signature verification.             */
+    /* AROS workaround: avoid provider-based EVP_PKEY operations. */
+    pkey = EVP_PKEY_new();
     if (pkey == NULL) {
-        if (s->verify_mode != SSL_VERIFY_NONE) {
-            SSLfatal(s, SSL_AD_INTERNAL_ERROR,
-                SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS);
-            return WORK_ERROR;
-        }
-        /* fabricate a minimal pkey so downstream code doesn't crash */
-        pkey = EVP_PKEY_new();
-        if (pkey == NULL) {
-            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
-            return WORK_ERROR;
-        }
+        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+        return WORK_ERROR;
     }
 #else
+    pkey = X509_get0_pubkey(x);
     if (pkey == NULL || EVP_PKEY_missing_parameters(pkey)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR,
             SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS);

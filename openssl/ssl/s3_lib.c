@@ -5471,30 +5471,20 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
 #endif
     if (pkey == NULL) {
         int nid = tls1_group_id2nid(id, 0);
-#if defined(__AROS__)
-#endif
         if (nid != NID_undef) {
-#if defined(__AROS__)
-#endif
             EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
-#if defined(__AROS__)
-#endif
             if (ec != NULL) {
                 if (EC_KEY_generate_key(ec)) {
-#if defined(__AROS__)
-                    /* AROS: EC_KEY_generate_key uses LCG RNG
-                     * (set in test), should not hang.            */
-#endif
                     pkey = EVP_PKEY_new();
                     if (pkey != NULL)
                         EVP_PKEY_assign_EC_KEY(pkey, ec);
                     else
                         EC_KEY_free(ec);
                 } else {
-#if defined(__AROS__)
-#endif
                     EC_KEY_free(ec);
                 }
+#endif
+            }
             }
         } else if (ginf->realname != NULL) {
 #if defined(__AROS__)
