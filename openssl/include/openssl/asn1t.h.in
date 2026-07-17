@@ -95,13 +95,14 @@ extern "C" {
 
 /* AROS x86_64 workaround: The Exec ELF loader does NOT process
  * R_X86_64_PC32 cross-section relocations (".text → .rodata").
- * Force the static ITEM data into the .text section (without const)
- * so all relocations are intra-section and work correctly.         */
+ * Put the static ITEM data into .data section (already writable,
+ * used for linker-generated data).  The code references it via
+ * R_X86_64_32 (absolute 32-bit) which AROS Exec handles.          */
 
 #define ASN1_ITEM_start(itname)        \
     const ASN1_ITEM *itname##_it(void) \
     {                                  \
-        static ASN1_ITEM local_it __attribute__((section(".text"))) = {
+        static const ASN1_ITEM local_it __attribute__((section(".data"))) = {
 
 #define static_ASN1_ITEM_start(itname) \
     static ASN1_ITEM_start(itname)

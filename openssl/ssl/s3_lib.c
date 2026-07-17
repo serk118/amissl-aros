@@ -5483,12 +5483,8 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
                 } else {
                     EC_KEY_free(ec);
                 }
-#endif
-            }
             }
         } else if (ginf->realname != NULL) {
-#if defined(__AROS__)
-#endif
             int keytype = NID_undef;
             size_t keylen = 0;
             if (strcmp(ginf->realname, "X25519") == 0) {
@@ -5506,8 +5502,6 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
             }
         }
     }
-#if defined(__AROS__)
-#endif
 
 err:
     EVP_PKEY_CTX_free(pctx);
