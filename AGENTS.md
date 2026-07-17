@@ -35,6 +35,16 @@ X509_NAME — each needing correct `offsetof` and sub-ITEM pointers.
 4. Remove `certbytes += cert_len` bypass in `statem_clnt.c`
 5. Remove `tls_post_process_server_certificate` workarounds in `statem_clnt.c`
 
+### Current blocker: Need AROS dos.library rebuild
+The PC32 +4 formula fix was applied to source:
+- `rom/dos/internalloadseg_elf.c` — runtime ELF loader (dos.library)
+- `bootstrap/elfloader.c` — boot-time ELF loader
+
+Binary patching dos.library with addend changes DOES NOT work (breaks all programs).
+Need to rebuild AROS from source. The build takes several hours.
+Build tree: `~/work/arosbuilds/core-linux-x86_64/`
+Source: `~/work/arosbuilds/AROS/rom/dos/internalloadseg_elf.c`
+
 ## Build & Deploy
 ```bash
 export PATH="/home/serk118/work/arosbuilds/toolchain-core-x86_64:$PATH"

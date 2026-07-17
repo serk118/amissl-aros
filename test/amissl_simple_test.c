@@ -5,6 +5,7 @@
 #include <amissl/tags.h>
 #include <openssl/ssl.h>
 
+long __stack = 1024 * 1024;
 struct Library *AmiSSLBase = NULL;
 
 int main(void)
