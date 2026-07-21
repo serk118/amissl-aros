@@ -665,6 +665,10 @@ $(BUILD_D)/httpget_simple: $(TEST_D)/httpget_simple.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 
+$(BUILD_D)/provider_test: $(TEST_D)/provider_test.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
+
 $(BUILD_D)/ssltest_diag: $(TEST_D)/ssltest_diag.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^

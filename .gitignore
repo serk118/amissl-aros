@@ -24,3 +24,7 @@ core
 /PATCH_LOG.md
 /RESUME_LATER.md
 /SESSION_LOG.md
+AGENTS.md
+email_to_deadwood.md
+amissl-deadwood-patches.tar.gz
+test/just_main.c

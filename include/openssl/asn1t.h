@@ -106,23 +106,36 @@ extern "C" {
 
 /* AROS x86_64 workaround: The Exec ELF loader does NOT process
  * R_X86_64_PC32 cross-section relocations (".text → .rodata").
- * Put the static ITEM data into .data section (already writable,
- * used for linker-generated data).  The code references it via
- * R_X86_64_32 (absolute 32-bit) which AROS Exec handles.          */
-
-#define ASN1_ITEM_start(itname)        \
+ * Use inline asm with "p" constraint to generate R_X86_64_32S
+ * (absolute 32-bit sign-extended) which the Exec DOES handle.    */
+#if defined(__AROS__) && defined(__x86_64__)
+# define ASN1_ITEM_start(itname)        \
     const ASN1_ITEM *itname##_it(void) \
     {                                  \
-        static const ASN1_ITEM local_it __attribute__((section(".data"))) = {
-
-#define static_ASN1_ITEM_start(itname) \
+        static const ASN1_ITEM local_it = {
+# define static_ASN1_ITEM_start(itname) \
     static ASN1_ITEM_start(itname)
-
-#define ASN1_ITEM_end(itname)          \
+# define ASN1_ITEM_end(itname)          \
+        };                             \
+        const ASN1_ITEM *ptr;           \
+        __asm__("movq %1, %0"           \
+                : "=r"(ptr)             \
+                : "p"(&local_it));      \
+        return ptr;                     \
+    }
+#else
+# define ASN1_ITEM_start(itname)        \
+    const ASN1_ITEM *itname##_it(void) \
+    {                                  \
+        static const ASN1_ITEM local_it = {
+# define static_ASN1_ITEM_start(itname) \
+    static ASN1_ITEM_start(itname)
+# define ASN1_ITEM_end(itname)          \
     }                                  \
     ;                                  \
     { return &local_it; }              \
     }
+#endif
 
 /* Macros to aid ASN1 template writing */
 
