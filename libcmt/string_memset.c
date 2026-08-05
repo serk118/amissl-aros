@@ -116,8 +116,17 @@ __memset(unsigned char * to,unsigned char value,size_t len)
 		}
 	}
 
-	while(len-- > 0)
-		(*to++) = value;
+	{
+		/* The volatile pointer keeps GCC from recognizing this loop as a
+		   memset idiom and replacing it with `call memset`, which -- since
+		   this very translation unit defines memset -- would recurse into
+		   itself forever (infinite recursion / stack overflow) whenever the
+		   caller's length is not a multiple of sizeof(long). */
+		volatile unsigned char * vto = to;
+
+		while(len-- > 0)
+			(*vto++) = value;
+	}
 }
 
 /****************************************************************************/

@@ -24,14 +24,15 @@ static int tls1_set_crypto_state(OSSL_RECORD_LAYER *rl, int level,
     size_t taglen,
     int mactype,
     const EVP_MD *md,
-    COMP_METHOD *comp)
+    const COMP_METHOD *comp)
 {
     EVP_CIPHER_CTX *ciph_ctx;
     EVP_PKEY *mac_key;
     int enc = (rl->direction == OSSL_RECORD_DIRECTION_WRITE) ? 1 : 0;
 
-    if (level != OSSL_RECORD_PROTECTION_LEVEL_APPLICATION)
+    if (level != OSSL_RECORD_PROTECTION_LEVEL_APPLICATION) {
         return OSSL_RECORD_RETURN_FATAL;
+    }
 
     if ((rl->enc_ctx = EVP_CIPHER_CTX_new()) == NULL) {
         RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);

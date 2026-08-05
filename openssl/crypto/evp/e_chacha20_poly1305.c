@@ -176,6 +176,10 @@ static int chacha20_poly1305_init_key(EVP_CIPHER_CTX *ctx,
     if (!inkey && !iv)
         return 1;
 
+    if (actx == NULL) {
+        return 0;
+    }
+
     actx->len.aad = 0;
     actx->len.text = 0;
     actx->aad = 0;

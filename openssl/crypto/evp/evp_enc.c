@@ -148,9 +148,9 @@ static int evp_cipher_init_internal(EVP_CIPHER_CTX *ctx,
         || tmpimpl != NULL
 #endif
         || impl != NULL
-        || (cipher != NULL && cipher->origin == EVP_ORIG_METH)
+        || (cipher != NULL && (cipher->origin == EVP_ORIG_METH || cipher->origin == EVP_ORIG_GLOBAL))
         || (cipher == NULL && ctx->cipher != NULL
-            && ctx->cipher->origin == EVP_ORIG_METH)) {
+            && (ctx->cipher->origin == EVP_ORIG_METH || ctx->cipher->origin == EVP_ORIG_GLOBAL))) {
         if (ctx->cipher == ctx->fetched_cipher)
             ctx->cipher = NULL;
         EVP_CIPHER_free(ctx->fetched_cipher);

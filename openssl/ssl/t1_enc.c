@@ -17,6 +17,7 @@
 #include <openssl/comp.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
+#include <openssl/sha.h>
 #include <openssl/rand.h>
 #include <openssl/obj_mac.h>
 #include <openssl/core_names.h>
@@ -46,6 +47,182 @@ static int tls1_PRF(SSL_CONNECTION *s,
             ERR_raise(ERR_LIB_SSL, ERR_R_INTERNAL_ERROR);
         return 0;
     }
+#if defined(__AROS__)
+    /*
+     * AROS workaround: EVP_KDF_fetch / EVP_KDF_derive go through the
+     * provider layer which is not usable here. Implement the TLS 1.2
+     * P_hash PRF directly with the legacy digest primitives.
+     */
+    {
+        const unsigned char *seeds[5];
+        size_t seed_lens[5];
+        size_t nseed = 0, seed_total = 0;
+        size_t mdlen, blocksize;
+        int is384;
+        unsigned int i;
+        unsigned char k0[SHA512_DIGEST_LENGTH + 64];
+        unsigned char a[SHA512_DIGEST_LENGTH];
+        unsigned char *seedbuf = NULL, *tmp;
+
+        if (seed1_len > 0) { seeds[nseed] = seed1; seed_lens[nseed] = seed1_len; seed_total += seed1_len; nseed++; }
+        if (seed2_len > 0) { seeds[nseed] = seed2; seed_lens[nseed] = seed2_len; seed_total += seed2_len; nseed++; }
+        if (seed3_len > 0) { seeds[nseed] = seed3; seed_lens[nseed] = seed3_len; seed_total += seed3_len; nseed++; }
+        if (seed4_len > 0) { seeds[nseed] = seed4; seed_lens[nseed] = seed4_len; seed_total += seed4_len; nseed++; }
+        if (seed5_len > 0) { seeds[nseed] = seed5; seed_lens[nseed] = seed5_len; seed_total += seed5_len; nseed++; }
+
+        mdlen = EVP_MD_get_size(md);
+        is384 = (mdlen == 48);
+        blocksize = is384 ? 128 : 64;
+
+        seedbuf = OPENSSL_malloc(seed_total);
+        if (seedbuf == NULL) {
+            if (fatal)
+                SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_MALLOC_FAILURE);
+            else
+                ERR_raise(ERR_LIB_SSL, ERR_R_MALLOC_FAILURE);
+            return 0;
+        }
+        tmp = seedbuf;
+        for (i = 0; i < nseed; i++) {
+            memcpy(tmp, seeds[i], seed_lens[i]);
+            tmp += seed_lens[i];
+        }
+
+        /* HMAC key padding: k0 = H(key) if len(key) > blocksize else key padded */
+        memset(k0, 0, sizeof(k0));
+        if (slen > blocksize) {
+            if (is384) {
+                SHA512_CTX hc;
+                SHA384_Init(&hc);
+                SHA384_Update(&hc, sec, slen);
+                SHA384_Final(k0, &hc);
+            } else {
+                SHA256_CTX hc;
+                SHA256_Init(&hc);
+                SHA256_Update(&hc, sec, slen);
+                SHA256_Final(k0, &hc);
+            }
+        } else {
+            memcpy(k0, sec, slen);
+        }
+
+        /* A(0) = seed */
+        if (is384) {
+            SHA512_CTX hc;
+            unsigned char ipad[128], opad[128];
+            /* A(1) = HMAC(key, seed) */
+            for (i = 0; i < 128; i++) { ipad[i] = k0[i] ^ 0x36; opad[i] = k0[i] ^ 0x5c; }
+            SHA384_Init(&hc);
+            SHA384_Update(&hc, ipad, 128);
+            SHA384_Update(&hc, seedbuf, seed_total);
+            SHA384_Final(a, &hc);
+            {
+                SHA512_CTX h2;
+                SHA384_Init(&h2);
+                SHA384_Update(&h2, opad, 128);
+                SHA384_Update(&h2, a, 48);
+                SHA384_Final(a, &h2);
+            }
+        } else {
+            SHA256_CTX hc;
+            unsigned char ipad[64], opad[64];
+            for (i = 0; i < 64; i++) { ipad[i] = k0[i] ^ 0x36; opad[i] = k0[i] ^ 0x5c; }
+            SHA256_Init(&hc);
+            SHA256_Update(&hc, ipad, 64);
+            SHA256_Update(&hc, seedbuf, seed_total);
+            SHA256_Final(a, &hc);
+            {
+                SHA256_CTX h2;
+                SHA256_Init(&h2);
+                SHA256_Update(&h2, opad, 64);
+                SHA256_Update(&h2, a, 32);
+                SHA256_Final(a, &h2);
+            }
+        }
+
+        /* P_hash: out = HMAC(A(1)+seed) || HMAC(A(2)+seed) || ... */
+        {
+            size_t written = 0;
+            unsigned char *hout = out;
+            while (written < olen) {
+                unsigned char tmpbuf[48];
+                size_t chunk = olen - written;
+                if (chunk > mdlen)
+                    chunk = mdlen;
+                if (is384) {
+                    SHA512_CTX hc;
+                    unsigned char ipad[128], opad[128];
+                    for (i = 0; i < 128; i++) { ipad[i] = k0[i] ^ 0x36; opad[i] = k0[i] ^ 0x5c; }
+                    SHA384_Init(&hc);
+                    SHA384_Update(&hc, ipad, 128);
+                    SHA384_Update(&hc, a, 48);
+                    SHA384_Update(&hc, seedbuf, seed_total);
+                    SHA384_Final(tmpbuf, &hc);
+                    {
+                        SHA512_CTX h2;
+                        SHA384_Init(&h2);
+                        SHA384_Update(&h2, opad, 128);
+                        SHA384_Update(&h2, tmpbuf, 48);
+                        SHA384_Final(tmpbuf, &h2);
+                    }
+                    memcpy(hout, tmpbuf, chunk);
+                    /* A(i+1) = HMAC(key, A(i)) */
+                    {
+                        SHA512_CTX h3;
+                        unsigned char anew[48];
+                        SHA384_Init(&h3);
+                        SHA384_Update(&h3, ipad, 128);
+                        SHA384_Update(&h3, a, 48);
+                        SHA384_Final(anew, &h3);
+                        {
+                            SHA512_CTX h4;
+                            SHA384_Init(&h4);
+                            SHA384_Update(&h4, opad, 128);
+                            SHA384_Update(&h4, anew, 48);
+                            SHA384_Final(a, &h4);
+                        }
+                    }
+                } else {
+                    SHA256_CTX hc;
+                    unsigned char ipad[64], opad[64];
+                    for (i = 0; i < 64; i++) { ipad[i] = k0[i] ^ 0x36; opad[i] = k0[i] ^ 0x5c; }
+                    SHA256_Init(&hc);
+                    SHA256_Update(&hc, ipad, 64);
+                    SHA256_Update(&hc, a, 32);
+                    SHA256_Update(&hc, seedbuf, seed_total);
+                    SHA256_Final(tmpbuf, &hc);
+                    {
+                        SHA256_CTX h2;
+                        SHA256_Init(&h2);
+                        SHA256_Update(&h2, opad, 64);
+                        SHA256_Update(&h2, tmpbuf, 32);
+                        SHA256_Final(tmpbuf, &h2);
+                    }
+                    memcpy(hout, tmpbuf, chunk);
+                    {
+                        SHA256_CTX h3;
+                        unsigned char anew[32];
+                        SHA256_Init(&h3);
+                        SHA256_Update(&h3, ipad, 64);
+                        SHA256_Update(&h3, a, 32);
+                        SHA256_Final(anew, &h3);
+                        {
+                            SHA256_CTX h4;
+                            SHA256_Init(&h4);
+                            SHA256_Update(&h4, opad, 64);
+                            SHA256_Update(&h4, anew, 32);
+                            SHA256_Final(a, &h4);
+                        }
+                    }
+                }
+                written += chunk;
+                hout += chunk;
+            }
+        }
+        OPENSSL_free(seedbuf);
+        return 1;
+    }
+#else
     kdf = EVP_KDF_fetch(SSL_CONNECTION_GET_CTX(s)->libctx,
         OSSL_KDF_NAME_TLS1_PRF,
         SSL_CONNECTION_GET_CTX(s)->propq);
@@ -84,6 +261,7 @@ err:
         ERR_raise(ERR_LIB_SSL, ERR_R_INTERNAL_ERROR);
     EVP_KDF_CTX_free(kctx);
     return 0;
+#endif
 }
 
 static int tls1_generate_key_block(SSL_CONNECTION *s, unsigned char *km,
@@ -165,6 +343,7 @@ int tls1_change_cipher_state(SSL_CONNECTION *s, int which)
         iv = &(p[n]);
         n += k;
     }
+
 
     if (n > s->s3.tmp.key_block_length) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);

@@ -6286,6 +6286,21 @@ int ssl_handshake_hash(SSL_CONNECTION *s,
     unsigned char *out, size_t outlen,
     size_t *hashlen)
 {
+#if defined(__AROS__)
+    extern int arossl_get_handshake_hash(unsigned char *out, size_t *outlen);
+    size_t len;
+    /* AROS: use raw SHA256 computed in s3_enc.c, avoiding EVP provider. */
+    if (outlen < SHA256_DIGEST_LENGTH) {
+        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+        return 0;
+    }
+    if (!arossl_get_handshake_hash(out, &len)) {
+        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+        return 0;
+    }
+    *hashlen = len;
+    return 1;
+#else
     EVP_MD_CTX *ctx = NULL;
     EVP_MD_CTX *hdgst = s->s3.handshake_dgst;
     int hashleni = EVP_MD_CTX_get_size(hdgst);
@@ -6314,6 +6329,7 @@ int ssl_handshake_hash(SSL_CONNECTION *s,
 err:
     EVP_MD_CTX_free(ctx);
     return ret;
+#endif
 }
 
 int SSL_session_reused(const SSL *s)

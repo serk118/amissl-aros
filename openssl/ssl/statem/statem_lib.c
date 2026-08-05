@@ -137,42 +137,25 @@ int tls_close_construct_packet(SSL_CONNECTION *s, WPACKET *pkt, int htype)
     return 1;
 }
 
-/* Debug helpers - write to stdout via Linux syscalls */
-#define DBG_P(str) do {} while(0)
-#define DBG_PV(str, val) do {} while(0)
-
 int tls_setup_handshake(SSL_CONNECTION *s)
 {
     int ver_min, ver_max, ok;
     SSL *ssl = SSL_CONNECTION_GET_SSL(s);
     SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
-    DBG_P("=== TSH start ===\n");
 
-    DBG_P("=== TSH finished_mac ===\n");
     if (!ssl3_init_finished_mac(s)) {
         return 0;
     }
-    DBG_P("=== TSH finished_mac OK ===\n");
 
     /* Reset any extension flags */
-    DBG_P("=== TSH memset ===\n");
     memset(s->ext.extflags, 0, sizeof(s->ext.extflags));
-    DBG_P("=== TSH memset OK ===\n");
 
-    DBG_P("=== TSH get_min_max ===\n");
     if (ssl_get_min_max_version(s, &ver_min, &ver_max, NULL) != 0) {
-        DBG_P("=== TSH get_min_max FAIL ===\n");
         SSLfatal(s, SSL_AD_PROTOCOL_VERSION, SSL_R_NO_PROTOCOLS_AVAILABLE);
         return 0;
     }
-    DBG_PV("=== TSH ver_min=", ver_min);
-    DBG_PV("=== TSH ver_max=", ver_max);
 
     /* Sanity check that we have MD5-SHA1 if we need it */
-    DBG_P("=== TSH digest check ===\n");
-    DBG_PV("=== TSH sctx=", (long)sctx);
-    DBG_PV("=== TSH digest_methods=", (long)sctx->ssl_digest_methods);
-    DBG_PV("=== TSH digest[MD5_SHA1]=", (long)sctx->ssl_digest_methods[SSL_MD_MD5_SHA1_IDX]);
     if (sctx->ssl_digest_methods[SSL_MD_MD5_SHA1_IDX] == NULL) {
         int negotiated_minversion;
         int md5sha1_needed_maxversion = SSL_CONNECTION_IS_DTLS(s)

@@ -113,6 +113,10 @@ static int x509_pubkey_ex_new_ex(ASN1_VALUE **pval, const ASN1_ITEM *it,
 
     if ((ret = OPENSSL_zalloc(sizeof(*ret))) == NULL)
         return 0;
+#if defined(__AROS__)
+    /* AROS: skip ENGINE/provider pubkey decode; use legacy ameth->pub_decode */
+    ret->flag_force_legacy = 1;
+#endif
     if (!x509_pubkey_ex_populate((ASN1_VALUE **)&ret, NULL)
         || !x509_pubkey_set0_libctx(ret, libctx, propq)) {
         x509_pubkey_ex_free((ASN1_VALUE **)&ret, NULL);

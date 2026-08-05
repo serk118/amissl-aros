@@ -13,6 +13,7 @@
 #include <openssl/evp.h>
 #include <openssl/md5.h>
 #include <openssl/core_names.h>
+#include <openssl/sha.h>
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
 
@@ -217,8 +218,31 @@ void ssl3_cleanup_key_block(SSL_CONNECTION *s)
     s->s3.tmp.key_block_length = 0;
 }
 
+#if defined(__AROS__)
+static SHA256_CTX aros_hs_sha;
+static unsigned char aros_hs_hash[SHA256_DIGEST_LENGTH];
+static int aros_hs_done = 0;
+
+int arossl_get_handshake_hash(unsigned char *out, size_t *outlen)
+{
+    if (!aros_hs_done)
+        return 0;
+    *outlen = SHA256_DIGEST_LENGTH;
+    memcpy(out, aros_hs_hash, SHA256_DIGEST_LENGTH);
+    return 1;
+}
+#endif
+
 int ssl3_init_finished_mac(SSL_CONNECTION *s)
 {
+#if defined(__AROS__)
+    /* AROS: skip memory BIO (BIO_write may hang).
+     * Use raw SHA256 for handshake hash accumulation. */
+    ssl3_free_digest_list(s);
+    SHA256_Init(&aros_hs_sha);
+    aros_hs_done = 0;
+    return 1;
+#else
     BIO *buf = BIO_new(BIO_s_mem());
 
     if (buf == NULL) {
@@ -229,6 +253,7 @@ int ssl3_init_finished_mac(SSL_CONNECTION *s)
     s->s3.handshake_buffer = buf;
     (void)BIO_set_close(s->s3.handshake_buffer, BIO_CLOSE);
     return 1;
+#endif
 }
 
 /*
@@ -246,14 +271,13 @@ void ssl3_free_digest_list(SSL_CONNECTION *s)
 
 int ssl3_finish_mac(SSL_CONNECTION *s, const unsigned char *buf, size_t len)
 {
-#if defined(__AROS__)
-    /* AROS: BIO_write to memory BIO hangs (provider/mem issue).
-     * Skip handshake hash accumulation for now. */
-    (void)buf; (void)len;
-    return 1;
-#else
     int ret;
 
+#if defined(__AROS__)
+    /* AROS: use raw SHA256 for handshake hash (no provider, no BIO). */
+    SHA256_Update(&aros_hs_sha, buf, len);
+    return 1;
+#else
     if (s->s3.handshake_dgst == NULL) {
         /* Note: this writes to a memory BIO so a failure is a fatal error */
         if (len > INT_MAX) {
@@ -279,8 +303,14 @@ int ssl3_finish_mac(SSL_CONNECTION *s, const unsigned char *buf, size_t len)
 #if defined(__AROS__)
 int ssl3_digest_cached_records(SSL_CONNECTION *s, int keep)
 {
-    /* AROS: EVP_DigestInit_ex/EVP_DigestUpdate hangs through provider layer.
-     * Skip handshake digest caching. */
+    /* AROS: finalize a COPY of the raw SHA256 handshake hash.
+     * We need to keep the original context alive to add our own Finished
+     * message to the hash for the server's Finished verification. */
+    SHA256_CTX tmp_ctx;
+    memcpy(&tmp_ctx, &aros_hs_sha, sizeof(SHA256_CTX));
+    SHA256_Final(aros_hs_hash, &tmp_ctx);
+    aros_hs_done = 1;
+    (void)s;
     (void)keep;
     return 1;
 }

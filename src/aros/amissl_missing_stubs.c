@@ -98,57 +98,47 @@ int LIB_ossl_crypto_thread_native_perform_join(struct Library * _base, void * __
 void *(CRYPTO_malloc)(size_t num, const char *file, int line)
 {
     (void)file; (void)line;
-    void *p = AllocVec(num, MEMF_ANY);
-    if (p == NULL && num > 0)
-        p = malloc(num);
-    return p;
+    if (num == 0)
+        num = 1;
+    return AllocVec(num, MEMF_ANY);
 }
 
 void (CRYPTO_free)(void *ptr, const char *file, int line)
 {
     (void)file; (void)line;
-    FreeVec(ptr);
+    if (ptr != NULL)
+        FreeVec(ptr);
 }
 
 void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
 {
     (void)file; (void)line;
-    void *p = AllocVec(num, MEMF_ANY);
-    if (p != NULL) {
-        unsigned char *cp = (unsigned char *)p;
-        size_t n;
-        for (n = 0; n < num; n++) cp[n] = 0;
-    } else if (num > 0) {
-        p = calloc(1, num);
-    }
-    return p;
+    if (num == 0)
+        num = 1;
+    return AllocVec(num, MEMF_CLEAR);
 }
 
 void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
 {
     (void)file; (void)line;
     if (addr == NULL) {
+        if (num == 0)
+            num = 1;
         void *p = AllocVec(num, MEMF_ANY);
-        if (p == NULL && num > 0)
-            p = malloc(num);
         return p;
     }
-    if (num == 0) { FreeVec(addr); return NULL; }
-    void *p = AllocVec(num, MEMF_ANY);
-    if (p == NULL) {
-        p = malloc(num);
-        if (p == NULL) return NULL;
-        unsigned char *src = (unsigned char *)addr;
-        unsigned char *dst = (unsigned char *)p;
-        size_t i;
-        for (i = 0; i < num; i++) dst[i] = src[i];
+    if (num == 0) {
         FreeVec(addr);
-        return p;
+        return NULL;
     }
+    void *p = AllocVec(num, MEMF_ANY);
+    if (p == NULL)
+        return NULL;
     unsigned char *src = (unsigned char *)addr;
     unsigned char *dst = (unsigned char *)p;
     size_t i;
-    for (i = 0; i < num; i++) dst[i] = src[i];
+    for (i = 0; i < num; i++)
+        dst[i] = src[i];
     FreeVec(addr);
     return p;
 }

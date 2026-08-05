@@ -229,9 +229,9 @@ static int evp_md_init_internal(EVP_MD_CTX *ctx, const EVP_MD *type,
 #endif
 #endif
         || (ctx->flags & EVP_MD_CTX_FLAG_NO_INIT) != 0
-        || (type != NULL && type->origin == EVP_ORIG_METH)
+        || (type != NULL && (type->origin == EVP_ORIG_METH || type->origin == EVP_ORIG_GLOBAL))
         || (type == NULL && ctx->digest != NULL
-            && ctx->digest->origin == EVP_ORIG_METH)) {
+            && (ctx->digest->origin == EVP_ORIG_METH || ctx->digest->origin == EVP_ORIG_GLOBAL))) {
         /* If we were using provided hash before, cleanup algctx */
         if (!evp_md_ctx_free_algctx(ctx))
             return 0;

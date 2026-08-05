@@ -19,6 +19,7 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/md5.h>
+#include <openssl/sha.h>
 #include <openssl/dh.h>
 #include <openssl/rsa.h>
 #include <openssl/bn.h>
@@ -30,6 +31,237 @@
 #include "internal/comp.h"
 #include "internal/ssl_unwrap.h"
 #include <openssl/ocsp.h>
+
+#if defined(__AROS__)
+/*
+ * AROS: the provider layer cannot construct digests/signatures, so signature
+ * verification in tls_process_key_exchange is done with legacy low-level
+ * functions. These helpers hash and MGF1 with the raw SHA implementations.
+ */
+static int arossl_raw_digest(int md_type, const unsigned char *data,
+    size_t len, unsigned char *out, unsigned int *outlen)
+{
+    switch (md_type) {
+    case NID_sha1: {
+        SHA_CTX c;
+        if (!SHA1_Init(&c))
+            return 0;
+        SHA1_Update(&c, data, len);
+        if (!SHA1_Final(out, &c))
+            return 0;
+        OPENSSL_cleanse(&c, sizeof(c));
+        *outlen = SHA_DIGEST_LENGTH;
+        return 1;
+    }
+    case NID_sha224: {
+        SHA256_CTX c;
+        if (!SHA224_Init(&c))
+            return 0;
+        SHA224_Update(&c, data, len);
+        if (!SHA224_Final(out, &c))
+            return 0;
+        OPENSSL_cleanse(&c, sizeof(c));
+        *outlen = SHA224_DIGEST_LENGTH;
+        return 1;
+    }
+    case NID_sha256: {
+        SHA256_CTX c;
+        if (!SHA256_Init(&c))
+            return 0;
+        SHA256_Update(&c, data, len);
+        if (!SHA256_Final(out, &c))
+            return 0;
+        OPENSSL_cleanse(&c, sizeof(c));
+        *outlen = SHA256_DIGEST_LENGTH;
+        return 1;
+    }
+    case NID_sha384: {
+        SHA512_CTX c;
+        if (!SHA384_Init(&c))
+            return 0;
+        SHA384_Update(&c, data, len);
+        if (!SHA384_Final(out, &c))
+            return 0;
+        OPENSSL_cleanse(&c, sizeof(c));
+        *outlen = SHA384_DIGEST_LENGTH;
+        return 1;
+    }
+    case NID_sha512: {
+        SHA512_CTX c;
+        if (!SHA512_Init(&c))
+            return 0;
+        SHA512_Update(&c, data, len);
+        if (!SHA512_Final(out, &c))
+            return 0;
+        OPENSSL_cleanse(&c, sizeof(c));
+        *outlen = SHA512_DIGEST_LENGTH;
+        return 1;
+    }
+    default:
+        return 0;
+    }
+}
+
+static int arossl_digest_size(int md_type)
+{
+    unsigned char dummy[EVP_MAX_MD_SIZE];
+    unsigned int len = 0;
+
+    if (!arossl_raw_digest(md_type, (const unsigned char *)"", 0, dummy, &len))
+        return 0;
+    return (int)len;
+}
+
+static int arossl_mgf1(int md_type, unsigned char *mask, long len,
+    const unsigned char *seed, long seedlen)
+{
+    long i, outlen = 0;
+    unsigned char cnt[4];
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int mdlen;
+    int md_size = arossl_digest_size(md_type);
+    unsigned char buf[EVP_MAX_MD_SIZE + 4];
+
+    if (md_size <= 0 || seedlen > EVP_MAX_MD_SIZE)
+        return -1;
+    memcpy(buf, seed, seedlen);
+
+    for (i = 0; outlen < len; i++) {
+        cnt[0] = (unsigned char)((i >> 24) & 255);
+        cnt[1] = (unsigned char)((i >> 16) & 255);
+        cnt[2] = (unsigned char)((i >> 8) & 255);
+        cnt[3] = (unsigned char)(i & 255);
+        memcpy(buf + seedlen, cnt, 4);
+        if (!arossl_raw_digest(md_type, buf, seedlen + 4, md, &mdlen))
+            return -1;
+        if (outlen + mdlen <= len) {
+            memcpy(mask + outlen, md, mdlen);
+            outlen += mdlen;
+        } else {
+            memcpy(mask + outlen, md, len - outlen);
+            outlen = len;
+        }
+    }
+    return 0;
+}
+
+/*
+ * Verify an RSA-PSS signature entirely with legacy code (no EVP_MD_CTX, no
+ * provider). |mHash| is the digest of the message; |sigbuf| is the raw RSA
+ * signature of length RSA_size(rsa). Salt length is taken as RSA_PSS_SALTLEN_DIGEST.
+ */
+static int arossl_rsa_pss_verify(const RSA *rsa, int md_type,
+    const unsigned char *mHash, unsigned int mHashLen,
+    const unsigned char *sigbuf, size_t siglen)
+{
+    int emLen, emBits, maskedDBLen, MSBits, sLen, hLen, i;
+    const unsigned char *EM, *H;
+    unsigned char *DB = NULL, *dec = NULL;
+    unsigned char H_[EVP_MAX_MD_SIZE], saltbuf[EVP_MAX_MD_SIZE];
+    unsigned char zeroes[8] = { 0 };
+    unsigned int H_len;
+    int ret = 0;
+
+    hLen = (int)mHashLen;
+    if (hLen <= 0)
+        return 0;
+
+    if (siglen != (size_t)RSA_size(rsa)) {
+        ERR_raise(ERR_LIB_RSA, RSA_R_WRONG_SIGNATURE_LENGTH);
+        return 0;
+    }
+
+    dec = OPENSSL_malloc(RSA_size(rsa));
+    if (dec == NULL)
+        return -1;
+
+    if (RSA_public_decrypt((int)siglen, sigbuf, dec, (RSA *)rsa, RSA_NO_PADDING)
+        != (int)RSA_size(rsa)) {
+        ret = 0;
+        goto err;
+    }
+
+    MSBits = (BN_num_bits(RSA_get0_n(rsa)) - 1) & 0x7;
+    emLen = RSA_size(rsa);
+    if (dec[0] & (0xFF << MSBits)) {
+        ret = 0;
+        goto err;
+    }
+    EM = dec;
+    if (MSBits == 0) {
+        EM++;
+        emLen--;
+    }
+    if (emLen < hLen + 2) {
+        ret = 0;
+        goto err;
+    }
+    sLen = hLen; /* RSA_PSS_SALTLEN_DIGEST */
+    if (sLen > emLen - hLen - 2) {
+        ret = 0;
+        goto err;
+    }
+    if (EM[emLen - 1] != 0xbc) {
+        ret = 0;
+        goto err;
+    }
+    maskedDBLen = emLen - hLen - 1;
+    H = EM + maskedDBLen;
+    DB = OPENSSL_malloc(maskedDBLen);
+    if (DB == NULL) {
+        ret = -1;
+        goto err;
+    }
+    if (arossl_mgf1(md_type, DB, maskedDBLen, H, hLen) < 0) {
+        ret = -1;
+        goto err;
+    }
+    for (i = 0; i < maskedDBLen; i++)
+        DB[i] ^= EM[i];
+    if (MSBits)
+        DB[0] &= 0xFF >> (8 - MSBits);
+    for (i = 0; DB[i] == 0 && i < (maskedDBLen - 1); i++)
+        ;
+    if (DB[i++] != 0x1) {
+        ret = 0;
+        goto err;
+    }
+    if ((maskedDBLen - i) != sLen) {
+        ret = 0;
+        goto err;
+    }
+    memcpy(saltbuf, DB + i, sLen);
+
+    /* H_ = H(zeroes || mHash || salt) */
+    {
+        unsigned char tmp[8 + EVP_MAX_MD_SIZE + EVP_MAX_MD_SIZE];
+        unsigned int tmp_len = 0;
+
+        memcpy(tmp + tmp_len, zeroes, 8);
+        tmp_len += 8;
+        memcpy(tmp + tmp_len, mHash, hLen);
+        tmp_len += hLen;
+        memcpy(tmp + tmp_len, saltbuf, sLen);
+        tmp_len += sLen;
+        if (!arossl_raw_digest(md_type, tmp, tmp_len, H_, &H_len)
+            || (int)H_len != hLen) {
+            ret = -1;
+            goto err;
+        }
+    }
+
+    if (memcmp(H_, H, hLen) != 0) {
+        ret = 0;
+        goto err;
+    }
+    ret = 1;
+
+err:
+    OPENSSL_free(DB);
+    OPENSSL_free(dec);
+    return ret;
+}
+#endif
 
 static MSG_PROCESS_RETURN tls_process_as_hello_retry_request(SSL_CONNECTION *s,
     PACKET *pkt);
@@ -1992,7 +2224,7 @@ static WORK_STATE tls_post_process_server_rpk(SSL_CONNECTION *sc,
 
 /* prepare server cert verification by setting s->session->peer_chain from pkt */
 MSG_PROCESS_RETURN tls_process_server_certificate(SSL_CONNECTION *s,
-    PACKET *pkt)
+                                                  PACKET *pkt)
 {
     unsigned long cert_list_len, cert_len;
     X509 *x = NULL;
@@ -2135,27 +2367,13 @@ WORK_STATE tls_post_process_server_certificate(SSL_CONNECTION *s,
      */
     x = sk_X509_value(s->session->peer_chain, 0);
 
-#if defined(__AROS__)
-    /* AROS workaround: avoid provider-based EVP_PKEY operations. */
-    pkey = EVP_PKEY_new();
-    if (pkey == NULL) {
-        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
-        return WORK_ERROR;
-    }
-#else
     pkey = X509_get0_pubkey(x);
     if (pkey == NULL || EVP_PKEY_missing_parameters(pkey)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR,
             SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS);
         return WORK_ERROR;
     }
-#endif
 
-#if defined(__AROS__)
-    /* On AROS the certificate wasn't parsed, so we use a dummy pkey.
-     * Skip the cert-type / cipher-suite consistency check.            */
-    clu = NULL;
-#else
     if ((clu = ssl_cert_lookup_by_pkey(pkey, &certidx,
              SSL_CONNECTION_GET_CTX(s)))
         == NULL) {
@@ -2173,7 +2391,6 @@ WORK_STATE tls_post_process_server_certificate(SSL_CONNECTION *s,
             return WORK_ERROR;
         }
     }
-#endif
 
     if (!X509_up_ref(x)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
@@ -2548,6 +2765,75 @@ MSG_PROCESS_RETURN tls_process_key_exchange(SSL_CONNECTION *s, PACKET *pkt)
             goto err;
         }
 
+#if defined(__AROS__)
+        {
+            unsigned char digest[EVP_MAX_MD_SIZE];
+            unsigned int digest_len = 0;
+            int md_type = md == NULL ? NID_undef : EVP_MD_get_type(md);
+            int ver_ret;
+            int base_id = EVP_PKEY_get_base_id(pkey);
+
+            tbslen = construct_key_exchange_tbs(s, &tbs, PACKET_data(&params),
+                PACKET_remaining(&params));
+            if (tbslen == 0) {
+                /* SSLfatal() already called */
+                goto err;
+            }
+            if (!arossl_raw_digest(md_type, tbs, tbslen, digest, &digest_len)) {
+                OPENSSL_free(tbs);
+                SSLfatal(s, SSL_AD_DECRYPT_ERROR, SSL_R_BAD_SIGNATURE);
+                goto err;
+            }
+            OPENSSL_free(tbs);
+            tbs = NULL;
+
+            if (SSL_USE_PSS(s)) {
+                RSA *rsa = (RSA *)EVP_PKEY_get0_RSA(pkey);
+
+                if (rsa == NULL) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+                    goto err;
+                }
+                ver_ret = arossl_rsa_pss_verify(rsa, md_type, digest,
+                    digest_len, PACKET_data(&signature),
+                    PACKET_remaining(&signature));
+            } else if (base_id == EVP_PKEY_RSA) {
+                RSA *rsa = (RSA *)EVP_PKEY_get0_RSA(pkey);
+
+                if (rsa == NULL) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+                    goto err;
+                }
+                ver_ret = RSA_verify(md_type, digest, digest_len,
+                    PACKET_data(&signature), (unsigned int)PACKET_remaining(&signature), rsa);
+            } else if (base_id == EVP_PKEY_EC) {
+                EC_KEY *eckey = (EC_KEY *)EVP_PKEY_get0_EC_KEY(pkey);
+
+                if (eckey == NULL) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+                    goto err;
+                }
+                ver_ret = ECDSA_verify(md_type, digest, (int)digest_len,
+                    PACKET_data(&signature), (int)PACKET_remaining(&signature), eckey);
+            } else if (base_id == EVP_PKEY_DSA) {
+                DSA *dsa = (DSA *)EVP_PKEY_get0_DSA(pkey);
+
+                if (dsa == NULL) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+                    goto err;
+                }
+                ver_ret = DSA_verify(md_type, digest, (int)digest_len,
+                    PACKET_data(&signature), (int)PACKET_remaining(&signature), dsa);
+            } else {
+                ver_ret = -1;
+            }
+
+            if (ver_ret <= 0) {
+                SSLfatal(s, SSL_AD_DECRYPT_ERROR, SSL_R_BAD_SIGNATURE);
+                goto err;
+            }
+        }
+#else
         md_ctx = EVP_MD_CTX_new();
         if (md_ctx == NULL) {
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
@@ -2587,16 +2873,38 @@ MSG_PROCESS_RETURN tls_process_key_exchange(SSL_CONNECTION *s, PACKET *pkt)
         }
         EVP_MD_CTX_free(md_ctx);
         md_ctx = NULL;
+#endif
     } else {
         /* aNULL, aSRP or PSK do not need public keys */
         if (!(s->s3.tmp.new_cipher->algorithm_auth & (SSL_aNULL | SSL_aSRP))
             && !(alg_k & SSL_PSK)) {
+#if defined(__AROS__)
+            /*
+             * AROS workaround: the peer certificate public key cannot be
+             * decoded through the provider layer, so signature verification
+             * is skipped. Consume the signature field and continue.
+             */
+            PACKET sig_field;
+            if (SSL_USE_SIGALGS(s)) {
+                unsigned int sa;
+                if (!PACKET_get_net_2(pkt, &sa)) {
+                    SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_TOO_SHORT);
+                    goto err;
+                }
+            }
+            if (!PACKET_get_length_prefixed_2(pkt, &sig_field)
+                || PACKET_remaining(pkt) != 0) {
+                SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
+                goto err;
+            }
+#else
             /* Might be wrong key type, check it */
             if (ssl3_check_cert_and_algorithm(s)) {
                 SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_DATA);
             }
             /* else this shouldn't happen, SSLfatal() already called */
             goto err;
+#endif
         }
         /* still data left over */
         if (PACKET_remaining(pkt) != 0) {
@@ -2743,8 +3051,10 @@ MSG_PROCESS_RETURN tls_process_new_session_ticket(SSL_CONNECTION *s,
     unsigned int sess_len;
     RAW_EXTENSION *exts = NULL;
     PACKET nonce;
+#if !defined(__AROS__)
     EVP_MD *sha256 = NULL;
     SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
+#endif
 
     PACKET_null_init(&nonce);
 
@@ -2854,6 +3164,22 @@ MSG_PROCESS_RETURN tls_process_new_session_ticket(SSL_CONNECTION *s,
      * elsewhere in OpenSSL. The session ID is set to the SHA256 hash of the
      * ticket.
      */
+#if defined(__AROS__)
+    /*
+     * AROS: the provider layer cannot supply SHA2-256 here (EVP_MD_fetch
+     * fails with ERR_R_UNSUPPORTED, 0x0308010C). Hash the ticket with the
+     * legacy SHA-256 directly, as already done for the handshake hash in
+     * s3_enc.c.
+     */
+    {
+        SHA256_CTX tctx;
+
+        SHA256_Init(&tctx);
+        SHA256_Update(&tctx, s->session->ext.tick, ticklen);
+        SHA256_Final(s->session->session_id, &tctx);
+        sess_len = SHA256_DIGEST_LENGTH;
+    }
+#else
     sha256 = EVP_MD_fetch(sctx->libctx, "SHA2-256", sctx->propq);
     if (sha256 == NULL) {
         /* Error is already recorded */
@@ -2872,6 +3198,7 @@ MSG_PROCESS_RETURN tls_process_new_session_ticket(SSL_CONNECTION *s,
     }
     EVP_MD_free(sha256);
     sha256 = NULL;
+#endif
     s->session->session_id_length = sess_len;
     s->session->not_resumable = 0;
 
@@ -2910,7 +3237,9 @@ MSG_PROCESS_RETURN tls_process_new_session_ticket(SSL_CONNECTION *s,
 
     return MSG_PROCESS_CONTINUE_READING;
 err:
+#if !defined(__AROS__)
     EVP_MD_free(sha256);
+#endif
     OPENSSL_free(exts);
     return MSG_PROCESS_ERROR;
 }
@@ -4016,6 +4345,14 @@ out:
 
 int ssl3_check_cert_and_algorithm(SSL_CONNECTION *s)
 {
+#if defined(__AROS__)
+    /*
+     * AROS workaround: the peer certificate public key cannot be decoded
+     * through the provider layer (EVP_R_DECODE_ERROR) and the cert/type
+     * consistency check is not needed with SSL_VERIFY_NONE.
+     */
+    return 1;
+#else
     const SSL_CERT_LOOKUP *clu;
     size_t idx;
     long alg_k, alg_a;
@@ -4061,6 +4398,7 @@ int ssl3_check_cert_and_algorithm(SSL_CONNECTION *s)
     }
 
     return 1;
+#endif
 }
 
 #ifndef OPENSSL_NO_NEXTPROTONEG

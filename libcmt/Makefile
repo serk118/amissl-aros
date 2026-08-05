@@ -296,7 +296,11 @@ LIBOBJS = $(BUILD_D)/threadhash.o \
           $(BUILD_D)/realloc.o \
           $(BUILD_D)/string_memset.o \
           $(BUILD_D)/gettimeofday.o \
-          $(BUILD_D)/getenv.o
+          $(BUILD_D)/getenv.o \
+          $(BUILD_D)/tolower.o \
+          $(BUILD_D)/toupper.o \
+          $(BUILD_D)/time.o \
+          $(BUILD_D)/gmtime.o
 else
 LIBOBJS = $(CLIB2OBJS) $(STDIOOBJS) $(NWLIBOBJS) $(INT64OBJS) $(MISCOBJS)
 endif

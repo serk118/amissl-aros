@@ -356,6 +356,13 @@ int ssl_load_ciphers(SSL_CTX *ctx)
 
     ctx->disabled_mkey_mask = 0;
     ctx->disabled_auth_mask = 0;
+
+    /*
+     * Initialize MAC pkey IDs.
+     */
+    memcpy(ctx->ssl_mac_pkey_id, default_mac_pkey_id,
+        sizeof(ctx->ssl_mac_pkey_id));
+
     return 1;
     /* Original code continues below (disabled) */
 
@@ -504,8 +511,9 @@ int ssl_cipher_get_evp(SSL_CTX *ctx, const SSL_SESSION *s,
     if ((enc == NULL) || (md == NULL))
         return 0;
 
-    if (!ssl_cipher_get_evp_cipher(ctx, c, enc))
+    if (!ssl_cipher_get_evp_cipher(ctx, c, enc)) {
         return 0;
+    }
 
     if (!ssl_cipher_get_evp_md_mac(ctx, c, md, mac_pkey_type,
             mac_secret_size)) {

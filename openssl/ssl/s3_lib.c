@@ -5388,6 +5388,38 @@ EVP_PKEY *ssl_generate_pkey(SSL_CONNECTION *s, EVP_PKEY *pm)
 
     if (pm == NULL)
         return NULL;
+#if defined(__AROS__)
+    /*
+     * AROS workaround: EVP_PKEY_CTX_new_from_pkey / EVP_PKEY_keygen go
+     * through the provider layer which is not usable here. Generate the
+     * client ephemeral key with the legacy EC_KEY API instead.
+     */
+    {
+        const EC_KEY *ec = EVP_PKEY_get0_EC_KEY(pm);
+        if (ec != NULL) {
+            const EC_GROUP *group = EC_KEY_get0_group(ec);
+            EC_KEY *cec = NULL;
+            if (group != NULL)
+                cec = EC_KEY_new_by_curve_name(EC_GROUP_get_curve_name(group));
+            if (cec != NULL) {
+                if (EC_KEY_generate_key(cec)) {
+                    pkey = EVP_PKEY_new();
+                    if (pkey != NULL)
+                        EVP_PKEY_assign_EC_KEY(pkey, cec);
+                    else
+                        EC_KEY_free(cec);
+                } else {
+                    EC_KEY_free(cec);
+                }
+            }
+        }
+    }
+    if (pkey == NULL) {
+        SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+        return NULL;
+    }
+    return pkey;
+#else
     pctx = EVP_PKEY_CTX_new_from_pkey(sctx->libctx, pm, sctx->propq);
     if (pctx == NULL)
         goto err;
@@ -5401,6 +5433,7 @@ EVP_PKEY *ssl_generate_pkey(SSL_CONNECTION *s, EVP_PKEY *pm)
 err:
     EVP_PKEY_CTX_free(pctx);
     return pkey;
+#endif
 }
 
 /* Generate a private key from a group ID */
@@ -5470,23 +5503,9 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
     pkey = EVP_PKEY_Q_keygen(sctx->libctx, sctx->propq, ginf->realname);
 #endif
     if (pkey == NULL) {
-        int nid = tls1_group_id2nid(id, 0);
-        if (nid != NID_undef) {
-            EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
-            if (ec != NULL) {
-                if (EC_KEY_generate_key(ec)) {
-                    pkey = EVP_PKEY_new();
-                    if (pkey != NULL)
-                        EVP_PKEY_assign_EC_KEY(pkey, ec);
-                    else
-                        EC_KEY_free(ec);
-                } else {
-                    EC_KEY_free(ec);
-                }
-            }
-        } else if (ginf->realname != NULL) {
-            int keytype = NID_undef;
-            size_t keylen = 0;
+        int keytype = NID_undef;
+        size_t keylen = 0;
+        if (ginf->realname != NULL) {
             if (strcmp(ginf->realname, "X25519") == 0) {
                 keytype = EVP_PKEY_X25519;
                 keylen = 32;
@@ -5494,11 +5513,28 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
                 keytype = EVP_PKEY_X448;
                 keylen = 56;
             }
-            if (keytype != NID_undef && keylen > 0) {
-                unsigned char privkey[56];
-                if (RAND_priv_bytes(privkey, (int)keylen))
-                    pkey = EVP_PKEY_new_raw_private_key(keytype, NULL,
-                        privkey, keylen);
+        }
+        if (keytype != NID_undef && keylen > 0) {
+            /* X25519/X448: not Weierstrass curves, use raw private key */
+            unsigned char privkey[56];
+            if (RAND_priv_bytes(privkey, (int)keylen))
+                pkey = EVP_PKEY_new_raw_private_key(keytype, NULL,
+                    privkey, keylen);
+        } else {
+            int nid = tls1_group_id2nid(id, 0);
+            if (nid != NID_undef) {
+                EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
+                if (ec != NULL) {
+                    if (EC_KEY_generate_key(ec)) {
+                        pkey = EVP_PKEY_new();
+                        if (pkey != NULL)
+                            EVP_PKEY_assign_EC_KEY(pkey, ec);
+                        else
+                            EC_KEY_free(ec);
+                    } else {
+                        EC_KEY_free(ec);
+                    }
+                }
             }
         }
     }
@@ -5540,7 +5576,7 @@ int ssl_derive(SSL_CONNECTION *s, EVP_PKEY *privkey, EVP_PKEY *pubkey, int gense
     int rv = 0;
     unsigned char *pms = NULL;
     size_t pmslen = 0;
-    EVP_PKEY_CTX *pctx;
+    EVP_PKEY_CTX *pctx = NULL;
     SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
 
     if (privkey == NULL || pubkey == NULL) {
@@ -5548,6 +5584,39 @@ int ssl_derive(SSL_CONNECTION *s, EVP_PKEY *privkey, EVP_PKEY *pubkey, int gense
         return 0;
     }
 
+#if defined(__AROS__)
+    /*
+     * AROS workaround: EVP_PKEY_CTX_new_from_pkey / EVP_PKEY_derive_*
+     * go through the provider layer which is not usable here. Compute the
+     * ECDH shared secret with the legacy EC_KEY API instead.
+     */
+    {
+        const EC_KEY *priv_ec = EVP_PKEY_get0_EC_KEY(privkey);
+        const EC_KEY *pub_ec = EVP_PKEY_get0_EC_KEY(pubkey);
+        if (priv_ec != NULL && pub_ec != NULL) {
+            const EC_POINT *pub_pt = EC_KEY_get0_public_key(pub_ec);
+            int plen = EVP_PKEY_get_size(privkey);
+            if (pub_pt != NULL && plen > 0) {
+                pms = OPENSSL_malloc((size_t)plen);
+                if (pms != NULL) {
+                    int r = ECDH_compute_key(pms, (size_t)plen, pub_pt, priv_ec, NULL);
+                    if (r > 0) {
+                        pmslen = (size_t)r;
+                    } else {
+                        OPENSSL_free(pms);
+                        pms = NULL;
+                    }
+                }
+            }
+        }
+        if (pms == NULL || pmslen == 0) {
+            OPENSSL_free(pms);
+            pms = NULL;
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_EVP_LIB);
+            return 0;
+        }
+    }
+#else
     pctx = EVP_PKEY_CTX_new_from_pkey(sctx->libctx, privkey, sctx->propq);
 
     if (EVP_PKEY_derive_init(pctx) <= 0
@@ -5573,6 +5642,7 @@ int ssl_derive(SSL_CONNECTION *s, EVP_PKEY *privkey, EVP_PKEY *pubkey, int gense
         SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_KEY_SHARE);
         goto err;
     }
+#endif
 
     if (gensecret) {
         /* SSLfatal() called as appropriate in the below functions */
