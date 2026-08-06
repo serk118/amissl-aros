@@ -442,6 +442,8 @@ LIBPROTOVA(CleanupAmiSSL, LONG, REG(a6, __BASE_OR_IFACE), ...)
 
 LIBPROTO(__UserLibCleanup, void, REG(a6, UNUSED __BASE_OR_IFACE), REG(a0, struct LibraryHeader *libBase))
 {
+  AMISSL_STATE *state;
+
   TRACELINE();
 
   // Skip OPENSSL_cleanup() + __free_libcmt() — they destroy global
@@ -451,6 +453,9 @@ LIBPROTO(__UserLibCleanup, void, REG(a6, UNUSED __BASE_OR_IFACE), REG(a0, struct
   // OPENSSL_cleanup();
   // CRYPTO_THREAD_cleanup();
   // __free_libcmt();
+
+  if((state = GetAmiSSLState()))
+    CleanupTimers(state);
 
   if(UtilityBase != NULL)
   {

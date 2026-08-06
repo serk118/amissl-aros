@@ -144,7 +144,7 @@ static struct Library *OpenAmiSSLBase(int MaxAPI, ...)
   if(LibAPIVersion <= MaxAPI)
   {
     va_list va;
-    int version;
+    long version;
     LONG libversion;
     const char *libfmt;
 
@@ -161,14 +161,19 @@ static struct Library *OpenAmiSSLBase(int MaxAPI, ...)
 
     va_start(va, MaxAPI);
 
-    for(version = va_arg(va, int); version; version = va_arg(va, int))
+    for(version = va_arg(va, long); version; version = va_arg(va, long))
     {
       char libname[40];
-      SNPrintf(libname, sizeof(libname), libfmt, version);
+      snprintf(libname, sizeof(libname), libfmt, version);
+      { char _b[160]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase try '%s' ver=%ld rawver=%d MaxAPI=%d LibAPIVersion=%d\n", libname, (long)libversion, version, MaxAPI, (int)LibAPIVersion); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
       if((lib = OpenLibrary(libname, libversion)))
       {
 	AmiSSLBase = lib;
         break;
+      }
+      else
+      {
+        { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase '%s' OPEN FAILED\n", libname); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
       }
     }
 
@@ -557,6 +562,19 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
   #endif
   LONG err = 0;
 
+  /* AROS debug: raw syscall write to stderr (hosted AROS = linux process) */
+  {
+    char _buf[160];
+    long _w;
+    int _n;
+    _n = snprintf(_buf, sizeof(_buf),
+        "[MASTER] OpenAmiSSLTagList APIVersion=%ld UsesOSSL=%ld tagList=%08lx\n",
+        (long)APIVersion, (long)GetTagData(AmiSSL_UsesOpenSSLStructs,TRUE,tagList),
+        (unsigned long)tagList);
+    __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_buf), "d"(_n) : "rcx","r11","memory");
+    (void)_w;
+  }
+
   if(InitAmiSSLMaster(APIVersion,GetTagData(AmiSSL_UsesOpenSSLStructs,TRUE,tagList)))
   {
     if(OpenAmiSSL())
@@ -576,6 +594,7 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
           #undef CloseAmiSSL
           CloseAmiSSL();
           err = 3;
+          { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=3 InitAmiSSLA failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
         }
       }
       else
@@ -593,11 +612,13 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
     else
     {
       err = 2;
+      { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=2 OpenAmiSSL failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
     }
   }
   else
   {
     err = 1;
+    { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=1 InitAmiSSLMaster failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
   }
 
   return err;

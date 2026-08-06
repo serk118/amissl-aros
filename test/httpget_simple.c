@@ -280,6 +280,16 @@ static void progress_bytes(long sofar)
     }
 }
 
+static void do_cleanup(SSL_CTX *ctx, SSL *ssl, int fd)
+{
+    if (ssl) SSL_free(ssl);
+    if (fd >= 0) CloseSocket(fd);
+    if (ctx) SSL_CTX_free(ctx);
+    CleanupAmiSSLA(NULL);
+    if (AmiSSLBase) CloseLibrary(AmiSSLBase);
+    if (SocketBase) CloseLibrary(SocketBase);
+}
+
 int main(int argc, char **argv)
 {
     SSL_CTX *ctx;
@@ -339,7 +349,7 @@ int main(int argc, char **argv)
         Flush(Output());
 
         if (http_connect(ctx, host, port, &fd, &ssl) != 0)
-            return 1;
+        { do_cleanup(ctx, ssl, fd); return 1; }
 
         {
             char req[1024];
@@ -349,7 +359,7 @@ int main(int argc, char **argv)
             int wr = SSL_write(ssl, req, rl);
             Printf("REQSENT=%d\n", wr);
             Flush(Output());
-            if (wr <= 0) { SSL_free(ssl); SSL_CTX_free(ctx); CloseSocket(fd); return 1; }
+            if (wr <= 0) { do_cleanup(ctx, ssl, fd); return 1; }
         }
 
         for (;;) {
@@ -396,7 +406,7 @@ int main(int argc, char **argv)
             CloseSocket(fd); fd = -1;
             if (loc[0] == 0) {
                 Printf("Redirect %d without Location\n", code);
-                SSL_CTX_free(ctx);
+                do_cleanup(ctx, NULL, -1);
                 return 1;
             }
             Printf("LOCATION=%s\n", loc);
@@ -414,16 +424,14 @@ int main(int argc, char **argv)
         }
         if (code < 200 || code >= 300 || ho == 0) {
             Printf("HTTP error %d, not downloading\n", code);
-            SSL_free(ssl); ssl = NULL;
-            CloseSocket(fd); fd = -1;
-            SSL_CTX_free(ctx);
+            do_cleanup(ctx, ssl, fd);
             return 1;
         }
 
         out = Open(outpath, MODE_NEWFILE);
         if (!out) {
             Printf("Cannot open %s for write (IoErr=%ld)\n", outpath, IoErr());
-            SSL_CTX_free(ctx);
+            do_cleanup(ctx, NULL, fd);
             return 1;
         }
 
@@ -475,13 +483,11 @@ int main(int argc, char **argv)
         Printf("DONE\n");
         Flush(Output());
 
-        SSL_free(ssl); ssl = NULL;
-        CloseSocket(fd); fd = -1;
-        SSL_CTX_free(ctx);
+        do_cleanup(ctx, ssl, fd);
         return 0;
     }
 
     Printf("Too many redirects\n");
-    SSL_CTX_free(ctx);
+    do_cleanup(ctx, NULL, fd);
     return 1;
 }
