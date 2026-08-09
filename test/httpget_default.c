@@ -197,6 +197,17 @@ static int http_connect(SSL_CTX *ctx, const char *host, int port, int *fd, SSL *
     SSL_set_connect_state(*ssl);
     SSL_set_tlsext_host_name(*ssl, host);
     {
+        unsigned long pre = ERR_peek_error();
+        Printf("pre-peek=0x%08lx LIB=%d R=0x%x\n", pre, ERR_GET_LIB(pre), ERR_GET_REASON(pre));
+        Flush(Output());
+    }
+    ERR_clear_error();
+    {
+        unsigned long pre2 = ERR_peek_error();
+        Printf("post-clr-peek=0x%08lx LIB=%d R=0x%x\n", pre2, ERR_GET_LIB(pre2), ERR_GET_REASON(pre2));
+        Flush(Output());
+    }
+    {
         int r = SSL_connect(*ssl);
         unsigned long e = ERR_peek_error();
         int se = SSL_get_error(*ssl, r);
@@ -289,7 +300,10 @@ int main(int argc, char **argv)
 
     if (!(SocketBase = OpenLibrary("bsdsocket.library", 4))) return 1;
     SetErrnoPtr(&errno, sizeof(errno));
-    if (!(AmiSSLBase = OpenLibrary("amissl_v362.library", 0))) return 1;
+    if (!(AmiSSLBase = OpenLibrary("amissl_v362.library", 0))) {
+        CloseLibrary(SocketBase);
+        return 1;
+    }
     AmiSSLExtBase = AmiSSLBase;
     { struct TagItem t[3]; t[0].ti_Tag = AmiSSL_SocketBase; t[0].ti_Data = (IPTR)SocketBase;
       t[1].ti_Tag = AmiSSL_ErrNoPtr; t[1].ti_Data = (IPTR)&errno; t[2].ti_Tag = TAG_END;
@@ -309,10 +323,11 @@ int main(int argc, char **argv)
         do_cleanup(NULL, NULL, -1);
         return 1;
     }
-    SSL_CTX_set_cipher_list(ctx, "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256");
-    SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
-    SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
-    SSL_CTX_set1_groups_list(ctx, "P-256");
+    Printf("CTX-MIN=%d CTX-MAX=%d CTX-CIPHERS=%d\n",
+        SSL_CTX_get_min_proto_version(ctx),
+        SSL_CTX_get_max_proto_version(ctx),
+        sk_SSL_CIPHER_num(SSL_CTX_get_ciphers(ctx)));
+    Flush(Output());
     SSL_CTX_set_max_cert_list(ctx, 1024 * 1024);
 
     Printf("OUT=%s\n", outpath);

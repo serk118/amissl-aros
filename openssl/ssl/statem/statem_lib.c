@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include "../ssl_local.h"
 #include "statem_local.h"
+#include "internal/arossl_dbg.h"
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
 #include <openssl/buffer.h>
@@ -2558,6 +2559,13 @@ int ssl_set_client_hello_version(SSL_CONNECTION *s)
 
     if (ret != 0)
         return ret;
+
+#if defined(__AROS__)
+    if (ver_min == 0 || ver_max == TLS1_3_VERSION || ver_max > TLS1_2_VERSION) {
+        ver_max = TLS1_2_VERSION;
+        ver_min = TLS1_2_VERSION;
+    }
+#endif
 
     s->version = ver_max;
 

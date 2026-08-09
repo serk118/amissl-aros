@@ -12,6 +12,9 @@
 #include "internal/e_os.h"
 
 #include <stdio.h>
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
 #include "../ssl_local.h"
 #include "statem_local.h"
 #include "internal/constant_time.h"
@@ -4399,6 +4402,9 @@ CON_FUNC_RETURN tls_construct_new_session_ticket(SSL_CONNECTION *s, WPACKET *pkt
 
         if (!ssl_generate_session_id(s, s->session)) {
             /* SSLfatal() already called */
+#if defined(__AROS__)
+            arossl_dbg_msg("[SESS] caller statem_srvr\n");
+#endif
             goto err;
         }
         if (RAND_bytes_ex(SSL_CONNECTION_GET_CTX(s)->libctx,

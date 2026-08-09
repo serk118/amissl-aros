@@ -11,11 +11,19 @@
 
 #include <string.h>
 #include <openssl/err.h>
+#include <openssl/sslerr.h>
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
 #include "err_local.h"
 
 void ERR_new(void)
 {
     ERR_STATE *es;
+
+#if defined(__AROS__)
+    arossl_dbg_msg("[ERR-new] ERR_new called\n");
+#endif
 
     es = ossl_err_get_state_int();
     if (es == NULL)
@@ -53,6 +61,13 @@ void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
     size_t buf_size = 0;
     unsigned long flags = 0;
     size_t i;
+
+#if defined(__AROS__)
+    arossl_dbg_val("[ERR-every]", (long)lib);
+    arossl_dbg_val("[ERR-rreason]", (long)reason);
+    if (lib == ERR_LIB_SSL && reason == SSL_R_UNSUPPORTED_SSL_VERSION)
+        arossl_dbg_msg("[ERR] SSL reason 259 (UNSUPPORTED_SSL_VERSION) raised\n");
+#endif
 
     es = ossl_err_get_state_int();
     if (es == NULL)

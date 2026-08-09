@@ -20,6 +20,7 @@
 #include "../ssl_local.h"
 #include "statem_local.h"
 #include <assert.h>
+#include "internal/arossl_dbg.h"
 
 /*
  * This file implements the SSL/TLS/DTLS state machines.
@@ -166,6 +167,11 @@ void ossl_statem_fatal(SSL_CONNECTION *s, int al, int reason,
 {
     va_list args;
 
+#if defined(__AROS__)
+    arossl_dbg_msg("[FATAL] ossl_statem_fatal called\n");
+    arossl_dbg_val("[FATAL-reason]", (long)reason);
+#endif
+
     va_start(args, fmt);
     ERR_vset_error(ERR_LIB_SSL, reason, fmt, args);
     va_end(args);
@@ -293,6 +299,10 @@ void ossl_statem_set_hello_verify_done(SSL_CONNECTION *s)
 int ossl_statem_connect(SSL *s)
 {
     SSL_CONNECTION *sc = SSL_CONNECTION_FROM_SSL(s);
+
+#if defined(__AROS__)
+    arossl_dbg_msg("[STATEM] ossl_statem_connect entered\n");
+#endif
 
     if (sc == NULL)
         return -1;

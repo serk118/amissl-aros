@@ -16,27 +16,7 @@
 # include <errno.h>
 #endif
 
-static unsigned int lcg_state = 0xdeadbeef;
-static int lcg_bytes(unsigned char *buf, int num)
-{
-    int i;
-    for (i = 0; i < num; i++) {
-        lcg_state = lcg_state * 1103515245 + 12345;
-        buf[i] = (unsigned char)(lcg_state >> 16);
-    }
-    return 1;
-}
-static int lcg_status(void) { return 1; }
-static int lcg_seed(const void *buf, int num)
-{
-    if (num >= (int)sizeof(unsigned int))
-        lcg_state ^= *(const unsigned int *)buf;
-    return 1;
-}
-static RAND_METHOD lcg_rand = {
-    .seed = lcg_seed, .bytes = lcg_bytes, .cleanup = NULL,
-    .add = NULL, .pseudorand = lcg_bytes, .status = lcg_status
-};
+
 long __stack = 1024 * 1024;
 struct Library *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 
@@ -50,7 +30,6 @@ int main(void)
     { struct TagItem t[3]; t[0].ti_Tag=AmiSSL_SocketBase;t[0].ti_Data=(IPTR)SocketBase;
       t[1].ti_Tag=AmiSSL_ErrNoPtr;t[1].ti_Data=(IPTR)&errno;t[2].ti_Tag=TAG_END;
       InitAmiSSLA(t); }
-    RAND_set_rand_method(&lcg_rand); RAND_seed(&lcg_state,sizeof(lcg_state));
     EVP_add_digest(EVP_sha256());EVP_add_digest(EVP_sha384());
     EVP_add_cipher(EVP_aes_256_gcm());EVP_add_cipher(EVP_aes_128_gcm());EVP_add_cipher(EVP_chacha20_poly1305());
     ctx=SSL_CTX_new(TLS_client_method());

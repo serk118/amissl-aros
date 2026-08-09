@@ -4755,18 +4755,60 @@ const SSL_CIPHER *ssl3_get_cipher_by_id(uint32_t id)
     return OBJ_bsearch_ssl_cipher_id(&c, ssl3_scsvs, SSL3_NUM_SCSVS);
 }
 
+#if defined(__AROS__)
+/* AROS-only markers (12-bit reasons outside the real SSL_R_* range) pushed
+ * once per process by ssl3_get_cipher_by_std_name() to diagnose why a TLS 1.3
+ * stdname lookup can return NULL on real hardware while the identical binary
+ * works on hosted AROS. 0xE20..0xE24 do not collide with the ssl_ciph.c
+ * (0xE10..0xE13) or by_dir.c (0xE30..0xE32) or SSL_CTX_new (0xE01..0xE05)
+ * marker ranges. */
+#define AROS_CIPHER_MARK_TBLPTR 0xE20 /* alltabs[0] != tls13_ciphers */
+#define AROS_CIPHER_MARK_TBLSZ  0xE21 /* tblsize[0] != TLS13_NUM_CIPHERS */
+#define AROS_CIPHER_MARK_STDNUL 0xE22 /* tls13_ciphers[0].stdname == NULL */
+#define AROS_CIPHER_MARK_STDBAD 0xE23 /* first stdname != expected literal */
+#define AROS_CIPHER_MARK_BADNAME 0xE24 /* lookup name is not a default TLS1.3 name */
+#endif
+
 const SSL_CIPHER *ssl3_get_cipher_by_std_name(const char *stdname)
 {
     SSL_CIPHER *tbl;
-#if defined(OPENSSL_SYS_AMIGA) && defined(__amigaos4__)
-    /* baserel compiler bug workaround - GCC normally puts this array in
+#if defined(OPENSSL_SYS_AMIGA) && (defined(__amigaos4__) || defined(__AROS__))
+    /* baserel/AROS compiler bug workaround - GCC normally puts this array in
        .rodata, which is a bug when using -mbaserel as the .rodata relocs
        will point to the original .data, not the copy. We therefore make
        make the array static to force it into .data instead */
     static
 #endif
     SSL_CIPHER *alltabs[] = { tls13_ciphers, ssl3_ciphers, ssl3_scsvs };
-    size_t i, j, tblsize[] = { TLS13_NUM_CIPHERS, SSL3_NUM_CIPHERS, SSL3_NUM_SCSVS };
+#if defined(OPENSSL_SYS_AMIGA) && (defined(__amigaos4__) || defined(__AROS__))
+    static
+#endif
+    size_t tblsize[] = { TLS13_NUM_CIPHERS, SSL3_NUM_CIPHERS, SSL3_NUM_SCSVS };
+    size_t i, j;
+
+#if defined(__AROS__)
+    {
+        static int aros_cipher_diag_done = 0;
+
+        if (!aros_cipher_diag_done) {
+            aros_cipher_diag_done = 1;
+            if (alltabs[0] != tls13_ciphers)
+                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLPTR);
+            if (tblsize[0] != TLS13_NUM_CIPHERS)
+                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLSZ);
+            if (tls13_ciphers[0].stdname == NULL) {
+                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDNUL);
+            } else if (strcmp(tls13_ciphers[0].stdname, "TLS_AES_128_GCM_SHA256") != 0) {
+                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDBAD);
+            }
+        }
+    }
+    if (strcmp(stdname, "TLS_AES_256_GCM_SHA384") != 0
+        && strcmp(stdname, "TLS_CHACHA20_POLY1305_SHA256") != 0
+        && strcmp(stdname, "TLS_AES_128_GCM_SHA256") != 0) {
+        ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_BADNAME);
+    }
+#endif
 
     /* this is not efficient, necessary to optimize this? */
     for (j = 0; j < OSSL_NELEM(alltabs); j++) {

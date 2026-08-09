@@ -35,6 +35,7 @@
 #include <libraries/amissl.h>
 #include <openssl/crypto.h>
 #include <openssl/lhash.h>
+#include <openssl/rand.h>
 
 //#include <clib/amissl_protos.h>
 #define NO_MTCP_PROTOS
@@ -215,6 +216,88 @@ extern const unsigned int CAST_S_table6[256];
 extern const unsigned int CAST_S_table7[256];
 
 
+#if defined(__AROS__)
+/*
+** Library-owned default RAND method for AROS.
+**
+** AROS does not copy the library data segment per opener (no MULTIBASE), so
+** all AmiSSL users share the OpenSSL global state (default_RAND_meth etc.).
+** If one application installs a RAND_METHOD that lives in its own data
+** segment and then exits, default_RAND_meth in the shared library still
+** points into the freed memory and the next application crashes in
+** RAND_bytes_ex (privilege violation at a `jmp *meth->bytes`).
+**
+** Installing a method owned by the library itself (persistent for the life
+** of the library) at every InitAmiSSLA() both provides a working RAND for
+** AROS (bypassing the OpenSSL 3 provider/DRBG path, which fails on AROS)
+** and clobbers any stale method left behind by a previous application.
+*/
+static unsigned int aros_rand_state = 0;
+
+static void aros_rand_mix(const void *buf, int num)
+{
+  const unsigned char *p = buf;
+
+  while (num >= 4)
+  {
+    unsigned int v = (unsigned int)p[0] | ((unsigned int)p[1] << 8)
+                     | ((unsigned int)p[2] << 16) | ((unsigned int)p[3] << 24);
+    aros_rand_state = aros_rand_state * 1664525 + v;
+    p += 4;
+    num -= 4;
+  }
+  while (num-- > 0)
+    aros_rand_state = aros_rand_state * 1664525 + *p++;
+}
+
+static int aros_rand_seed(const void *buf, int num)
+{
+  aros_rand_mix(buf, num);
+  return 1;
+}
+
+static int aros_rand_add(const void *buf, int num, UNUSED double randomness)
+{
+  aros_rand_mix(buf, num);
+  return 1;
+}
+
+static int aros_rand_bytes(unsigned char *buf, int num)
+{
+  while (num-- > 0)
+  {
+    aros_rand_state = aros_rand_state * 1103515245 + 12345;
+    *buf++ = (unsigned char)(aros_rand_state >> 16);
+  }
+  return 1;
+}
+
+static int aros_rand_status(void) { return 1; }
+
+static RAND_METHOD aros_rand_meth = {
+  aros_rand_seed, aros_rand_bytes, NULL, aros_rand_add, aros_rand_bytes, aros_rand_status
+};
+
+static void aros_install_rand_method(void)
+{
+  struct Task *task = FindTask(NULL);
+  unsigned int seed;
+
+  seed  = (unsigned int)(unsigned long)&seed;
+  seed ^= (unsigned int)(unsigned long)task;
+  seed ^= (unsigned int)(unsigned long)SysBase;
+  seed ^= (unsigned int)(unsigned long)ownBase;
+  seed ^= (unsigned int)(unsigned long)&aros_rand_state;
+
+  /* Fresh starting point per process so concurrent or sequential
+   * applications do not share an identical LCG stream. */
+  aros_rand_state = seed != 0 ? seed : 0xdeadbeef;
+
+  /* Overwrite any (possibly dangling) method left by a previous app. */
+  RAND_set_rand_method(&aros_rand_meth);
+}
+#endif /* __AROS__ */
+
 LIBPROTO(InitAmiSSLA, LONG, REG(a6, __BASE_OR_IFACE), REG(a0, struct TagItem *tagList))
 {
   AMISSL_STATE *state;
@@ -290,6 +373,9 @@ LIBPROTO(InitAmiSSLA, LONG, REG(a6, __BASE_OR_IFACE), REG(a0, struct TagItem *ta
   {
     int *errno_ptr;
     struct Library **libbaseptr;
+#if defined(__AROS__)
+    aros_install_rand_method();
+#endif
 #ifdef __amigaos4__
     struct AmiSSLIFace **ifaceptr;
 #endif

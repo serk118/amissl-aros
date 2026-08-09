@@ -29,6 +29,7 @@
 #include "internal/cryptlib.h"
 #include "internal/nelem.h"
 #include "internal/refcount.h"
+#include "internal/arossl_dbg.h"
 #include "internal/thread_once.h"
 #include "internal/ktls.h"
 #include "internal/to_hex.h"
@@ -773,6 +774,14 @@ SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, SSL *user_ssl,
         s->min_proto_version = ctx->min_proto_version;
         s->max_proto_version = ctx->max_proto_version;
     }
+
+#if defined(__AROS__)
+    if (method->version == TLS_ANY_VERSION) {
+        s->min_proto_version = TLS1_2_VERSION;
+        s->max_proto_version = TLS1_2_VERSION;
+        arossl_dbg_msg("[SSL-NEW] AROS cap: TLS 1.2 set\n");
+    }
+#endif
 
     s->mode = ctx->mode;
     s->max_cert_list = ctx->max_cert_list;
@@ -2236,6 +2245,14 @@ int SSL_accept(SSL *s)
 int SSL_connect(SSL *s)
 {
     SSL_CONNECTION *sc = SSL_CONNECTION_FROM_SSL(s);
+
+#if defined(__AROS__)
+    SSL_set_cipher_list(s, "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256");
+    SSL_set_min_proto_version(s, TLS1_2_VERSION);
+    SSL_set_max_proto_version(s, TLS1_2_VERSION);
+    SSL_set1_groups_list(s, "P-256");
+#endif
 
 #ifndef OPENSSL_NO_QUIC
     if (IS_QUIC(s))
@@ -4097,6 +4114,20 @@ SSL_CTX *SSL_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq,
     ret->method = meth;
     ret->min_proto_version = 0;
     ret->max_proto_version = 0;
+#if defined(__AROS__)
+    /*
+     * The TLS 1.3 key schedule uses the provider layer (HKDF/EVP_MAC),
+     * which hangs on AROS. Default version-flexible methods to TLS 1.2
+     * (the fully supported path) unless the app explicitly opts into
+     * TLS 1.3 via SSL_CTX_set_max_proto_version().
+     */
+    if (meth->version == TLS_ANY_VERSION) {
+        ret->min_proto_version = TLS1_2_VERSION;
+        ret->max_proto_version = TLS1_2_VERSION;
+        arossl_dbg_msg("[CTX-NEW] AROS cap: TLS 1.2 set\n");
+        arossl_dbg_val("[CTX-NEW-ver]", (long)meth->version);
+    }
+#endif
     ret->mode = SSL_MODE_AUTO_RETRY;
     ret->session_cache_mode = SSL_SESS_CACHE_SERVER;
     ret->session_cache_size = SSL_SESSION_CACHE_MAX_SIZE_DEFAULT;
@@ -4499,15 +4530,42 @@ err:
     return NULL;
 }
 
+#if defined(__AROS__)
+/* AROS-only markers pushed onto the OpenSSL error queue by SSL_CTX_new()
+ * so a NULL return can be pinned to the failing sub-step on real hardware.
+ * Reason values 0xE01..0xE05 are outside the real SSL_R_* range. */
+#define AROS_CTXNEW_MARK_INITSSL   0xE01
+#define AROS_CTXNEW_MARK_ZALLOC    0xE02
+#define AROS_CTXNEW_MARK_NEWREF    0xE03
+#define AROS_CTXNEW_MARK_CERTNEW   0xE04
+#define AROS_CTXNEW_MARK_CIPHERSUI 0xE05
+#endif
+
 SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
 {
-    if (!OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_NO_LOAD_CONFIG, NULL))
+    if (!OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_NO_LOAD_CONFIG, NULL)) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_INITSSL);
+#endif
         return NULL;
+    }
     SSL_CTX *ret = OPENSSL_zalloc(sizeof(*ret));
-    if (ret == NULL) return NULL;
-    if (!CRYPTO_NEW_REF(&ret->references, 1)) { OPENSSL_free(ret); return NULL; }
+    if (ret == NULL) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_ZALLOC);
+#endif
+        return NULL;
+    }
+    if (!CRYPTO_NEW_REF(&ret->references, 1)) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_NEWREF);
+#endif
+        OPENSSL_free(ret); return NULL;
+    }
     ret->lock = CRYPTO_THREAD_lock_new();
     ret->method = meth;
+    ret->min_proto_version = 0;
+    ret->max_proto_version = 0;
     ret->session_cache_mode = SSL_SESS_CACHE_SERVER;
     ret->session_cache_size = SSL_SESSION_CACHE_MAX_SIZE_DEFAULT;
     ret->session_timeout = meth->get_timeout();
@@ -4519,10 +4577,17 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
     ssl_load_groups(ret);
     ssl_load_sigalgs(ret);
     ssl_setup_sigalgs(ret);
-    if ((ret->cert = ssl_cert_new(SSL_PKEY_NUM + ret->sigalg_list_len)) == NULL)
+    if ((ret->cert = ssl_cert_new(SSL_PKEY_NUM + ret->sigalg_list_len)) == NULL) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_CERTNEW);
+#endif
         return NULL;
+    }
     /* Populate the cipher list so SSL_get_ciphers() works. */
     if (!SSL_CTX_set_ciphersuites(ret, OSSL_default_ciphersuites())) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_CIPHERSUI);
+#endif
         SSL_CTX_free(ret);
         return NULL;
     }
@@ -4531,6 +4596,12 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
         &ret->cipher_list,
         &ret->cipher_list_by_id,
         OSSL_default_cipher_list(), ret->cert);
+#if defined(__AROS__)
+    if (meth->version == TLS_ANY_VERSION) {
+        ret->min_proto_version = TLS1_2_VERSION;
+        ret->max_proto_version = TLS1_2_VERSION;
+    }
+#endif
     return ret;
 }
 

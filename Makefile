@@ -170,6 +170,9 @@ WARN       = -W -Wall -Wwrite-strings -Wpointer-arith -Wsign-compare #-Wunreacha
 OPTFLAGS   = -Os -fomit-frame-pointer
 DEBUG      = -DDEBUG -fno-omit-frame-pointer $(DEBUGSYM)
 DEBUGSYM   = -g -gstabs
+# 1 when the [MASTER] debug markers (raw Linux syscall writes) are enabled.
+# Only valid for aros-x86_64; default 0 for every other target.
+HOSTED_AROS_MARK = 0
 INCLUDE    = -I./include -I$(BUILD_D) -I$(BUILD_D)/openssl/include -I./include/internal
 SYSROOT   ?= # cross-compiler sysroot, e.g. SYSROOT=/path/to/sysroot
 COMCFLAGS  = $(CPU) $(WARN) $(OPTFLAGS) $(DEBUG) $(INCLUDE) $(SYSROOT)
@@ -390,6 +393,14 @@ ifeq ($(OS), aros-x86_64)
   CFLAGS += -DDATE="\"$(shell date +%d.%m.%Y)\""
   CFLAGS += -DOPENSSL_RAND_SEED_NONE -DAI_PASSIVE=0
   CFLAGS += -mstackrealign
+  # [MASTER] debug markers in amisslmaster_library.c use a raw Linux write(2)
+  # syscall. That only works on HOSTED AROS (a Linux process); on native AROS
+  # 'syscall' raises #UD (Illegal instruction) and crashes. Enable the markers
+  # ONLY for hosted tests:  make ... HOSTED_AROS=1
+  HOSTED_AROS_MARK = $(if $(filter 1,$(HOSTED_AROS)),1,0)
+  ifeq ($(HOSTED_AROS_MARK),1)
+    CFLAGS += -DAMISSL_HOSTED_AROS
+  endif
   LDLIBS += -ldebug -lamiga -lm -lstdc.static -lgcc -lamisslapps -lamisslstubs -lamisslauto -lamissldebug
   LDFLAGS += -Wl,-z,notext -Wl,--allow-multiple-definition
 
@@ -462,7 +473,7 @@ APPS =  $(BUILD_D)/amisslmaster_test $(BUILD_D)/amissl_v$(VERSIONNAME)_test \
         $(BUILD_D)/https $(BUILD_D)/httpget $(BUILD_D)/run_all_tests \
         $(BUILD_D)/amissl_simple_test $(BUILD_D)/tcp_test \
         $(BUILD_D)/simple_bsd
-APPS += $(BUILD_D)/httpget_simple
+APPS += $(BUILD_D)/httpget_simple $(BUILD_D)/httpget_default
 ifneq ($(OS), aros-x86_64)
 APPS += $(BUILD_D)/uitest $(BUILD_D)/vatest
 endif
@@ -665,6 +676,14 @@ $(BUILD_D)/httpget_simple: $(TEST_D)/httpget_simple.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 
+$(BUILD_D)/httpget_simple_tls13: $(TEST_D)/httpget_simple_tls13.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
+
+$(BUILD_D)/httpget_default: $(TEST_D)/httpget_default.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
+
 $(BUILD_D)/provider_test: $(TEST_D)/provider_test.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
@@ -705,7 +724,21 @@ $(BUILD_D)/debug.o: $(SRC_D)/debug.c
 
 ## SOURCES COMPILED WITH restore-a4 ##
 
-$(BUILD_D)/amisslmaster_library.o: $(SRC_D)/amisslmaster_library.c
+# Generated config header recording the hosted-AROS marker state. The master
+# object depends on it so that toggling HOSTED_AROS (=1 hosted debug, else
+# native-safe) automatically recompiles amisslmaster_library.o. The FORCE
+# prerequisite re-runs the check every make, but the header is only rewritten
+# (and the object rebuilt) when the flag actually changes.
+.PHONY: FORCE
+FORCE:
+
+$(BUILD_D)/hosted_aros_config.h: FORCE
+	@if [ ! -f $@ ] || [ "$$(cat $@)" != "#define AMISSL_HOSTED_AROS_MARK $(HOSTED_AROS_MARK)" ]; then \
+	    echo "  GEN $@"; \
+	    printf '#define AMISSL_HOSTED_AROS_MARK $(HOSTED_AROS_MARK)\n' > $@; \
+	fi
+
+$(BUILD_D)/amisslmaster_library.o: $(SRC_D)/amisslmaster_library.c $(BUILD_D)/hosted_aros_config.h
 	@echo "  CC $<"
 	@$(CC) $(CFLAGS) $(BRELLIB) -c $< -o $@
 

@@ -1416,6 +1416,36 @@ CON_FUNC_RETURN tls_construct_client_hello(SSL_CONNECTION *s, WPACKET *pkt)
     SSL_SESSION *sess = s->session;
     unsigned char *session_id;
     SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
+    SSL *ssl = SSL_CONNECTION_GET_SSL(s);
+
+#if defined(__AROS__)
+    /*
+     * Direct internal calls — bypass AmiSSL dispatch (which fails silently
+     * from within the library because no library base is available for the
+     * dispatch stub). Set versions on both CTX and SSL so the version
+     * negotiation in ssl_get_min_max_version works correctly.
+     */
+    s->min_proto_version = TLS1_2_VERSION;
+    s->max_proto_version = TLS1_2_VERSION;
+    if (sctx->min_proto_version == 0) {
+        sctx->min_proto_version = TLS1_2_VERSION;
+        sctx->max_proto_version = TLS1_2_VERSION;
+    }
+    /* Cipher + group setup — do only once per handshake (not on HRR retry) */
+    if (s->hello_retry_request == SSL_HRR_NONE) {
+        ssl_create_cipher_list(sctx, s->tls13_ciphersuites,
+            &s->cipher_list, &s->cipher_list_by_id,
+            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+            "AES128-GCM-SHA256:AES256-GCM-SHA384",
+            s->cert);
+        tls1_set_groups_list(sctx,
+            &s->ext.supportedgroups, &s->ext.supportedgroups_len,
+            &s->ext.keyshares, &s->ext.keyshares_len,
+            &s->ext.tuples, &s->ext.tuples_len,
+            "P-256:P-384:P-521:X25519:X448");
+    }
+#endif
 
     /* Work out what SSL/TLS/DTLS version to use */
     protverr = ssl_set_client_hello_version(s);

@@ -1,0 +1,37 @@
+############################################################################
+#
+# makefile_native - build AmiSSL for NATIVE AROS (x86_64) ON an AROS system
+#
+# Run this makefile ON the AROS machine itself (or under hosted AROS with the
+# AROS toolchain on PATH). It forces:
+#   - HOST=AROS, OS=aros-x86_64          -> native AROS build, CC=gcc (no x86_64-aros- prefix)
+#   - DEBUG=                             -> release build
+#   - HOSTED_AROS=0                      -> NO hosted-AROS debug markers
+#
+# Why the markers must be off: the [MASTER] debug markers in
+# amisslmaster_library.c print via a raw Linux write(2) syscall. That only
+# works on hosted AROS (a Linux bootstrap process). Native AROS has no Linux
+# underneath and no IA32_LSTAR, so 'syscall' raises #UD (Illegal instruction,
+# error 0x80000004) and crashes the whole system. The default build of the
+# main Makefile is also native-safe; this file just pins everything so no
+# flags need to be remembered.
+#
+# Usage on AROS:
+#   make -f makefile_native
+#
+# The main Makefile is NOT touched by this build; this file only includes it
+# after pinning the variables above.
+#
+# Debug variant for HOSTED AROS tests only (cross-built from Linux):
+#   make OS=aros-x86_64 CROSS_PREFIX=x86_64-aros- DEBUG= HOSTED_AROS=1
+#
+############################################################################
+
+override HOST := AROS
+override OS := aros-x86_64
+override CROSS_PREFIX :=
+override DEBUG :=
+override HOSTED_AROS := 0
+override SYSROOT :=
+
+include Makefile

@@ -50,6 +50,36 @@
 
 #include "../libcmt/libcmt.h"
 
+/*
+ * AROS [MASTER] debug markers.
+ *
+ * The markers below dump to stderr using a raw Linux write(2) syscall. That
+ * only works on HOSTED AROS (a Linux process); native AROS has no Linux
+ * underneath and no IA32_LSTAR, so 'syscall' raises #UD -> Illegal
+ * instruction (error 0x80000004) and crashes the whole system. Native AROS
+ * never enables EFER.SCE/IA32_LSTAR, so there is no way to detect hosted vs
+ * native at runtime -- the choice must be made at BUILD time.
+ *
+ * Build the debug (hosted) variant with:  make ... HOSTED_AROS=1
+ * Build the native-safe variant with:     make ...   (default, markers off)
+ *
+ * Toggling HOSTED_AROS automatically recompiles this file (the Makefile
+ * tracks the flag via build_aros-x86_64/hosted_aros_config.h).
+ */
+#if defined(__AROS__) && defined(AMISSL_HOSTED_AROS)
+#define MASTER_DEBUG_SYSWRITE(buf, len)                                       \
+    do {                                                                      \
+        long _w;                                                              \
+        __asm__ __volatile__("syscall"                                        \
+            : "=a"(_w)                                                        \
+            : "0"(1), "D"(2), "S"(buf), "d"(len)                              \
+            : "rcx", "r11", "memory");                                        \
+        (void)_w;                                                             \
+    } while (0)
+#else
+#define MASTER_DEBUG_SYSWRITE(buf, len) do { } while (0)
+#endif
+
 struct Library *BlowFishBase, *CASTBase, *DESBase, *DHBase, *DSABase, *IDEABase;
 struct Library *MD2Base, *MD4Base, *MD5Base, *MDC2Base, *RC2Base, *RC4Base;
 struct Library *RC5Base, *RIPEMDBase, *SHABase, *RSABase;
@@ -165,7 +195,7 @@ static struct Library *OpenAmiSSLBase(int MaxAPI, ...)
     {
       char libname[40];
       snprintf(libname, sizeof(libname), libfmt, version);
-      { char _b[160]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase try '%s' ver=%ld rawver=%d MaxAPI=%d LibAPIVersion=%d\n", libname, (long)libversion, version, MaxAPI, (int)LibAPIVersion); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
+      { char _b[160]; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase try '%s' ver=%ld rawver=%d MaxAPI=%d LibAPIVersion=%d\n", libname, (long)libversion, version, MaxAPI, (int)LibAPIVersion); MASTER_DEBUG_SYSWRITE(_b, _n); }
       if((lib = OpenLibrary(libname, libversion)))
       {
 	AmiSSLBase = lib;
@@ -173,7 +203,7 @@ static struct Library *OpenAmiSSLBase(int MaxAPI, ...)
       }
       else
       {
-        { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase '%s' OPEN FAILED\n", libname); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
+        { char _b[96]; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] OpenAmiSSLBase '%s' OPEN FAILED\n", libname); MASTER_DEBUG_SYSWRITE(_b, _n); }
       }
     }
 
@@ -562,17 +592,15 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
   #endif
   LONG err = 0;
 
-  /* AROS debug: raw syscall write to stderr (hosted AROS = linux process) */
+  /* AROS debug: MASTER_DEBUG_SYSWRITE -> raw write(2) to stderr on hosted AROS */
   {
     char _buf[160];
-    long _w;
     int _n;
     _n = snprintf(_buf, sizeof(_buf),
         "[MASTER] OpenAmiSSLTagList APIVersion=%ld UsesOSSL=%ld tagList=%08lx\n",
         (long)APIVersion, (long)GetTagData(AmiSSL_UsesOpenSSLStructs,TRUE,tagList),
         (unsigned long)tagList);
-    __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_buf), "d"(_n) : "rcx","r11","memory");
-    (void)_w;
+    MASTER_DEBUG_SYSWRITE(_buf, _n);
   }
 
   if(InitAmiSSLMaster(APIVersion,GetTagData(AmiSSL_UsesOpenSSLStructs,TRUE,tagList)))
@@ -594,7 +622,7 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
           #undef CloseAmiSSL
           CloseAmiSSL();
           err = 3;
-          { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=3 InitAmiSSLA failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
+          { char _b[96]; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=3 InitAmiSSLA failed\n"); MASTER_DEBUG_SYSWRITE(_b, _n); }
         }
       }
       else
@@ -612,13 +640,13 @@ LIBPROTO(OpenAmiSSLTagList, LONG, REG(a6, __BASE_OR_IFACE), REG(d0, LONG APIVers
     else
     {
       err = 2;
-      { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=2 OpenAmiSSL failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
+      { char _b[96]; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=2 OpenAmiSSL failed\n"); MASTER_DEBUG_SYSWRITE(_b, _n); }
     }
   }
   else
   {
     err = 1;
-    { char _b[96]; long _w; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=1 InitAmiSSLMaster failed\n"); __asm__ __volatile__("syscall" : "=a"(_w) : "0"(1), "D"(2), "S"(_b), "d"(_n) : "rcx","r11","memory"); (void)_w; }
+    { char _b[96]; int _n; _n = snprintf(_b,sizeof(_b),"[MASTER] ERR=1 InitAmiSSLMaster failed\n"); MASTER_DEBUG_SYSWRITE(_b, _n); }
   }
 
   return err;

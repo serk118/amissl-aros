@@ -1249,6 +1249,17 @@ static int check_suiteb_cipher_list(const SSL_METHOD *meth, CERT *c,
     return 1;
 }
 
+#if defined(__AROS__)
+/* AROS-only markers pushed onto the OpenSSL error queue by the TLS 1.3
+ * ciphersuite list setup so a NULL SSL_CTX_new can be pinned to the failing
+ * sub-step on real hardware. Reason values 0xE10..0xE13 are outside the real
+ * SSL_R_* range (0xE01..0xE05 are used by SSL_CTX_new itself). */
+#define AROS_CIPHER_MARK_NAMENOTFOUND 0xE10
+#define AROS_CIPHER_MARK_NAME_FOUND   0xE11
+#define AROS_CIPHER_MARK_PUSHFAILED   0xE12
+#define AROS_CIPHER_MARK_NEWNULL      0xE13
+#endif
+
 static int ciphersuite_cb(const char *elem, int len, void *arg)
 {
     STACK_OF(SSL_CIPHER) *ciphersuites = (STACK_OF(SSL_CIPHER) *)arg;
@@ -1264,11 +1275,23 @@ static int ciphersuite_cb(const char *elem, int len, void *arg)
     name[len] = '\0';
 
     cipher = ssl3_get_cipher_by_std_name(name);
-    if (cipher == NULL)
+    if (cipher == NULL) {
+#if defined(__AROS__)
+        /* Trace: this TLS 1.3 name was not found in the stdname table */
+        ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_NAMENOTFOUND);
+#endif
         /* Ciphersuite not found but return 1 to parse rest of the list */
         return 1;
+    }
+#if defined(__AROS__)
+    /* Trace: this TLS 1.3 name WAS found (before the push attempt) */
+    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_NAME_FOUND);
+#endif
 
     if (!sk_SSL_CIPHER_push(ciphersuites, cipher)) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_PUSHFAILED);
+#endif
         ERR_raise(ERR_LIB_SSL, ERR_R_INTERNAL_ERROR);
         return 0;
     }
@@ -1280,8 +1303,12 @@ static __owur int set_ciphersuites(STACK_OF(SSL_CIPHER) **currciphers, const cha
 {
     STACK_OF(SSL_CIPHER) *newciphers = sk_SSL_CIPHER_new_null();
 
-    if (newciphers == NULL)
+    if (newciphers == NULL) {
+#if defined(__AROS__)
+        ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_NEWNULL);
+#endif
         return 0;
+    }
 
     /* Parse the list. We explicitly allow an empty list */
     if (*str != '\0'

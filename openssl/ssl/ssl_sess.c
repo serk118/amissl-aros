@@ -13,6 +13,9 @@
 #include <spt_extensions.h> /* timeval */
 #endif
 #include <stdio.h>
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
 #include <openssl/rand.h>
 #include <openssl/engine.h>
 #include "internal/refcount.h"
@@ -359,6 +362,12 @@ int ssl_generate_session_id(SSL_CONNECTION *s, SSL_SESSION *ss)
         || s->version == TLS1_3_VERSION) {
         ss->session_id_length = SSL3_SSL_SESSION_ID_LENGTH;
     } else {
+#if defined(__AROS__)
+        arossl_dbg_val("SESS-BADVER", (long)s->version);
+        arossl_dbg_msg("[SESS] ssl_generate_session_id rejected version\n");
+        ERR_put_error(ERR_LIB_SSL, 0, 0x600 + (unsigned int)(s->version & 0xFF),
+            __FILE__, __LINE__);
+#endif
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNSUPPORTED_SSL_VERSION);
         return 0;
     }
@@ -458,6 +467,9 @@ int ssl_get_new_session(SSL_CONNECTION *s, int session)
             ss->session_id_length = 0;
         } else if (!ssl_generate_session_id(s, ss)) {
             /* SSLfatal() already called */
+#if defined(__AROS__)
+            arossl_dbg_msg("[SESS] caller ssl_get_new_session\n");
+#endif
             SSL_SESSION_free(ss);
             return 0;
         }

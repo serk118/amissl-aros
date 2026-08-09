@@ -12,6 +12,10 @@
 #include <spt_extensions.h> /* timeval */
 #endif
 
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
+
 #include <string.h>
 #include "internal/nelem.h"
 #include "internal/cryptlib.h"
@@ -1003,6 +1007,9 @@ static int final_server_name(SSL_CONNECTION *s, unsigned int context, int sent)
                 ss->ext.tick_age_add = 0;
                 if (!ssl_generate_session_id(s, ss)) {
                     SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+#if defined(__AROS__)
+                    arossl_dbg_msg("[SESS] caller final_server_name\n");
+#endif
                     return 0;
                 }
             } else {
