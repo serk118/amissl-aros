@@ -19,8 +19,6 @@
 #include "internal/sockets.h"
 #if defined(__AROS__)
 # include "internal/arossl_dbg.h"
-# include <sys/time.h>
-# include <sys/socket.h>
 #endif
 
 static int ssl_write(BIO *h, const char *buf, size_t size, size_t *written);
@@ -388,7 +386,7 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
             const char *host = NULL;
             long r = BIO_ctrl(next, BIO_C_GET_CONNECT, 0, (void *)&host);
             if (r > 0 && host != NULL && host[0] != '\0') {
-                       if (SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name) == NULL) {
+                if (SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name) == NULL) {
                     if (SSL_in_init(ssl)) {
                         SSL_clear(ssl);
                     }
@@ -402,13 +400,6 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
 
         BIO_set_retry_reason(b, 0);
 #if defined(__AROS__)
-        /*
-         * On real AROS the connect BIO creates a blocking socket; TCP connect
-         * can freeze the GUI thread for 30-120s.  Set the connect BIO to
-         * non-blocking mode so the handshake returns quickly with WANT_CONNECT.
-         * Retry internally for up to ~500ms so AmiTranslate's single-shot
-         * BIO_C_DO_STATE_MACHINE call still completes the handshake.
-         */
         if (SSL_is_server(ssl) == 0 && next != NULL) {
             const char *host = NULL;
             BIO_ctrl(next, BIO_C_GET_CONNECT, 0, (void *)&host);
@@ -422,7 +413,7 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
         if (ret <= 0 && SSL_is_server(ssl) == 0) {
             int serr = SSL_get_error(ssl, (int)ret);
             int spin;
-            for (spin = 0; spin < 15000; spin++) {
+            for (spin = 0; spin < 50000; spin++) {
                 if (serr == SSL_ERROR_WANT_CONNECT
                     || serr == SSL_ERROR_WANT_READ
                     || serr == SSL_ERROR_WANT_WRITE) {
