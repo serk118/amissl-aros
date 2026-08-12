@@ -32,7 +32,10 @@ else
 DEBUG    = -DDEBUG -fno-omit-frame-pointer #-O0
 endif
 DEBUGSYM = -g -gstabs
-CFLAGS   = $(CPU) $(OPTFLAGS) $(DEBUG) $(DEBUGSYM) $(WARN) -I. -I../include -D__NO_NET_API -D_STDC_NOINLINE_DEPRECATED $(SYSROOT)
+CFLAGS   = $(CPU) $(OPTFLAGS) $(DEBUG) $(DEBUGSYM) $(WARN) -I. -I../include -I../openssl/include -D__NO_NET_API -D_STDC_NOINLINE_DEPRECATED $(SYSROOT)
+ifeq ($(HOSTED_AROS),1)
+CFLAGS   += -DAMISSL_HOSTED_AROS
+endif
 
 CC      = $(CROSS_PREFIX)gcc
 STRIP   = $(CROSS_PREFIX)strip

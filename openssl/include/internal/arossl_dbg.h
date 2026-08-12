@@ -10,7 +10,9 @@
 
 # if defined(__AROS__)
 
-#  include <string.h>
+#  if defined(AMISSL_HOSTED_AROS)
+
+#   include <string.h>
 
 static inline void arossl_dbg_raw(const char *s, int n)
 {
@@ -46,6 +48,14 @@ static inline void arossl_dbg_val(const char *tag, long v)
     b[pos] = '\0';
     arossl_dbg_raw(b, pos);
 }
+
+#  else  /* !AMISSL_HOSTED_AROS — native AROS, no syscall */
+
+static inline void arossl_dbg_raw(const char *s, int n) { (void)s; (void)n; }
+static inline void arossl_dbg_msg(const char *s)         { (void)s; }
+static inline void arossl_dbg_val(const char *tag, long v) { (void)tag; (void)v; }
+
+#  endif /* AMISSL_HOSTED_AROS */
 
 # endif /* __AROS__ */
 #endif /* OSSL_INTERNAL_AROSSL_DBG_H */

@@ -200,6 +200,19 @@ static int http_connect(SSL_CTX *ctx, const char *host, int port, int *fd, SSL *
         unsigned long pre = ERR_peek_error();
         Printf("pre-peek=0x%08lx LIB=%d R=0x%x\n", pre, ERR_GET_LIB(pre), ERR_GET_REASON(pre));
         Flush(Output());
+        {
+            /* Full queue dump after SSL_new/setup, before clear */
+            unsigned long e;
+            int n = 0;
+            Printf("NEW-QUEUE:");
+            Flush(Output());
+            while ((e = ERR_get_error()) != 0 && n++ < 16) {
+                Printf(" %08lx", e);
+                Flush(Output());
+            }
+            Printf("\n");
+            Flush(Output());
+        }
     }
     ERR_clear_error();
     {
@@ -304,11 +317,15 @@ int main(int argc, char **argv)
         CloseLibrary(SocketBase);
         return 1;
     }
-    AmiSSLExtBase = AmiSSLBase;
-    { struct TagItem t[3]; t[0].ti_Tag = AmiSSL_SocketBase; t[0].ti_Data = (IPTR)SocketBase;
-      t[1].ti_Tag = AmiSSL_ErrNoPtr; t[1].ti_Data = (IPTR)&errno; t[2].ti_Tag = TAG_END;
+    AmiSSLExtBase = NULL;
+    { struct TagItem t[4]; t[0].ti_Tag = AmiSSL_SocketBase; t[0].ti_Data = (IPTR)SocketBase;
+      t[1].ti_Tag = AmiSSL_ErrNoPtr; t[1].ti_Data = (IPTR)&errno;
+      t[2].ti_Tag = AmiSSL_GetAmiSSLExtBase; t[2].ti_Data = (IPTR)&AmiSSLExtBase;
+      t[3].ti_Tag = TAG_END;
       InitAmiSSLA(t); }
+#if !defined(__AROS__)
     OSSL_PROVIDER_load(NULL, "default");
+#endif
     EVP_add_digest(EVP_sha256()); EVP_add_digest(EVP_sha384());
     EVP_add_cipher(EVP_aes_256_gcm()); EVP_add_cipher(EVP_aes_128_gcm()); EVP_add_cipher(EVP_chacha20_poly1305());
     ctx = SSL_CTX_new(TLS_client_method());
@@ -328,6 +345,19 @@ int main(int argc, char **argv)
         SSL_CTX_get_max_proto_version(ctx),
         sk_SSL_CIPHER_num(SSL_CTX_get_ciphers(ctx)));
     Flush(Output());
+    {
+        /* Drain the queue right after SSL_CTX_new to see what CTX-new left */
+        unsigned long e;
+        int n = 0;
+        Printf("CTXNEW-QUEUE:");
+        Flush(Output());
+        while ((e = ERR_get_error()) != 0 && n++ < 16) {
+            Printf(" %08lx", e);
+            Flush(Output());
+        }
+        Printf("\n");
+        Flush(Output());
+    }
     SSL_CTX_set_max_cert_list(ctx, 1024 * 1024);
 
     Printf("OUT=%s\n", outpath);

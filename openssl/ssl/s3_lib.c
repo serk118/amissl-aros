@@ -25,6 +25,9 @@
 #include "internal/ssl_unwrap.h"
 #include <openssl/ocsp.h>
 #include <openssl/ec.h>
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
 #include <crypto/ecx.h>
 
 #define TLS13_NUM_CIPHERS OSSL_NELEM(tls13_ciphers)
@@ -4757,16 +4760,27 @@ const SSL_CIPHER *ssl3_get_cipher_by_id(uint32_t id)
 
 #if defined(__AROS__)
 /* AROS-only markers (12-bit reasons outside the real SSL_R_* range) pushed
- * once per process by ssl3_get_cipher_by_std_name() to diagnose why a TLS 1.3
- * stdname lookup can return NULL on real hardware while the identical binary
- * works on hosted AROS. 0xE20..0xE24 do not collide with the ssl_ciph.c
- * (0xE10..0xE13) or by_dir.c (0xE30..0xE32) or SSL_CTX_new (0xE01..0xE05)
- * marker ranges. */
+ * by ssl3_get_cipher_by_std_name() to diagnose why a TLS 1.3 stdname lookup
+ * can return NULL on real hardware while the identical binary works on hosted
+ * AROS. 0xE20..0xE24 do not collide with the ssl_ciph.c (0xE10..0xE13) or
+ * by_dir.c (0xE30..0xE32) or SSL_CTX_new (0xE01..0xE05) marker ranges.
+ *
+ * 0xE60..0xE7F (badname hexdump): after AROS_CIPHER_MARK_BADNAME, on the FIRST
+ * bad name only (static gate) the table-integrity checks fire, then the name
+ * is hexdumped (max 4 chars to stay inside the 16-slot error queue).
+ * reason = 0xE60 | (len & 0x1F) for the length, then one marker per character
+ * with reason = 0xE80 | (name[i] & 0xFF).
+ * ASCII 'T'=0x54 -> R=0xED4 (3796), 'L'=0x4C -> R=0xECC (3788), etc.
+ * Worst case (all 4 table checks + 4 chars): OBJ noise is pushed first and
+ * the ring drops the OLDEST on overflow, so this block always survives.
+ */
 #define AROS_CIPHER_MARK_TBLPTR 0xE20 /* alltabs[0] != tls13_ciphers */
 #define AROS_CIPHER_MARK_TBLSZ  0xE21 /* tblsize[0] != TLS13_NUM_CIPHERS */
 #define AROS_CIPHER_MARK_STDNUL 0xE22 /* tls13_ciphers[0].stdname == NULL */
 #define AROS_CIPHER_MARK_STDBAD 0xE23 /* first stdname != expected literal */
 #define AROS_CIPHER_MARK_BADNAME 0xE24 /* lookup name is not a default TLS1.3 name */
+#define AROS_CIPHER_MARK_NAMELEN 0xE60 /* reason = 0xE60 | (len & 0x1F) */
+#define AROS_CIPHER_MARK_NAME    0xE80 /* reason = 0xE80 | (char & 0xFF) */
 #endif
 
 const SSL_CIPHER *ssl3_get_cipher_by_std_name(const char *stdname)
@@ -4787,26 +4801,38 @@ const SSL_CIPHER *ssl3_get_cipher_by_std_name(const char *stdname)
     size_t i, j;
 
 #if defined(__AROS__)
-    {
-        static int aros_cipher_diag_done = 0;
-
-        if (!aros_cipher_diag_done) {
-            aros_cipher_diag_done = 1;
-            if (alltabs[0] != tls13_ciphers)
-                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLPTR);
-            if (tblsize[0] != TLS13_NUM_CIPHERS)
-                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLSZ);
-            if (tls13_ciphers[0].stdname == NULL) {
-                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDNUL);
-            } else if (strcmp(tls13_ciphers[0].stdname, "TLS_AES_128_GCM_SHA256") != 0) {
-                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDBAD);
-            }
-        }
-    }
     if (strcmp(stdname, "TLS_AES_256_GCM_SHA384") != 0
         && strcmp(stdname, "TLS_CHACHA20_POLY1305_SHA256") != 0
         && strcmp(stdname, "TLS_AES_128_GCM_SHA256") != 0) {
         ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_BADNAME);
+        {
+            /* One-shot diagnostic on the FIRST bad name (16-slot queue):
+             * 1x BADNAME + up to 4x table checks + 1x NAMELEN + 4x chars.
+             * On overflow the ring drops the OLDEST (OBJ noise) first, so
+             * these survive.  reason = 0xE60 | (len&0x1F), then per char
+             * reason = 0xE80 | (name[i]&0xFF): 'T'=0x54 -> R=0xED4 (3796). */
+            static int aros_badname_dumped = 0;
+            size_t nl, maxc = 4;
+
+            if (!aros_badname_dumped) {
+                aros_badname_dumped = 1;
+                if (alltabs[0] != tls13_ciphers)
+                    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLPTR);
+                if (tblsize[0] != TLS13_NUM_CIPHERS)
+                    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_TBLSZ);
+                if (tls13_ciphers[0].stdname == NULL) {
+                    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDNUL);
+                } else if (strcmp(tls13_ciphers[0].stdname, "TLS_AES_128_GCM_SHA256") != 0) {
+                    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_STDBAD);
+                }
+                nl = strlen(stdname);
+                if (nl > maxc)
+                    nl = maxc;
+                ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_NAMELEN | (int)(nl & 0x1F));
+                for (i = 0; i < nl; i++)
+                    ERR_raise(ERR_LIB_SSL, AROS_CIPHER_MARK_NAME | (stdname[i] & 0xFF));
+            }
+        }
     }
 #endif
 
@@ -5556,18 +5582,29 @@ EVP_PKEY *ssl_generate_param_group(SSL_CONNECTION *s, uint16_t id)
                 keylen = 56;
             }
         }
+#if defined(__AROS__)
+        arossl_dbg_val("[GENP-name]", (long)(ginf->realname != NULL ? ginf->realname[0] : 0));
+        arossl_dbg_val("[GENP-nid]", (long)tls1_group_id2nid(id, 0));
+#endif
         if (keytype != NID_undef && keylen > 0) {
             /* X25519/X448: not Weierstrass curves, use raw private key */
             unsigned char privkey[56];
             if (RAND_priv_bytes(privkey, (int)keylen))
                 pkey = EVP_PKEY_new_raw_private_key(keytype, NULL,
                     privkey, keylen);
+#if defined(__AROS__)
+            arossl_dbg_val("[GENP-x25519]", (long)pkey);
+#endif
         } else {
             int nid = tls1_group_id2nid(id, 0);
             if (nid != NID_undef) {
+                arossl_dbg_val("[EC-NEW] nid", (long)nid);
                 EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
+                arossl_dbg_val("[EC-NEW] ec", (long)ec);
                 if (ec != NULL) {
+                    arossl_dbg_msg("[EC-GEN] starting\n");
                     if (EC_KEY_generate_key(ec)) {
+                        arossl_dbg_msg("[EC-GEN] ok\n");
                         pkey = EVP_PKEY_new();
                         if (pkey != NULL)
                             EVP_PKEY_assign_EC_KEY(pkey, ec);

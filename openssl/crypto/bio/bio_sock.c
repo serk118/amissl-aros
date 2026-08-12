@@ -359,7 +359,20 @@ int BIO_socket_nbio(int s, int mode)
 #ifdef FIONBIO
     l = mode;
 
-    ret = BIO_socket_ioctl(s, FIONBIO, &l);
+#if defined(__AROS__)
+    /*
+     * AROS sockets are blocking by default.  BIO_socket_ioctl(FIONBIO) is
+     * unreliable (not implemented on hosted, may misbehave on native).
+     * Keep sockets always blocking to skip the BLOCKED_CONNECT / errno
+     * polling retry path entirely — that path loops on real AROS hardware
+     * and causes the "internet slows down" symptom.
+     */
+    (void)s;
+    (void)l;
+    ret = 0;
+#else
+        ret = BIO_socket_ioctl(s, FIONBIO, &l);
+#endif
 #elif defined(F_GETFL) && defined(F_SETFL) && (defined(O_NONBLOCK) || defined(FNDELAY))
     /* make sure this call always pushes an error level; BIO_socket_ioctl() does so, so we do too. */
 

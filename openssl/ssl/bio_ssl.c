@@ -17,6 +17,11 @@
 #include "ssl_local.h"
 #include "internal/ssl_unwrap.h"
 #include "internal/sockets.h"
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+# include <sys/time.h>
+# include <sys/socket.h>
+#endif
 
 static int ssl_write(BIO *h, const char *buf, size_t size, size_t *written);
 static int ssl_read(BIO *b, char *buf, size_t size, size_t *readbytes);
@@ -81,6 +86,9 @@ static int ssl_free(BIO *a)
         return 0;
     bs = BIO_get_data(a);
     if (BIO_get_shutdown(a)) {
+#if defined(AMISSL_HOSTED_AROS)
+        arossl_dbg_msg("[ssl_free] shutdown flag set\n");
+#endif
         if (bs->ssl != NULL && !SSL_in_init(bs->ssl))
             SSL_shutdown(bs->ssl);
         if (BIO_get_init(a))
@@ -357,8 +365,77 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
     case BIO_C_DO_STATE_MACHINE:
         BIO_clear_retry_flags(b);
 
+#if defined(__AROS__)
+        /*
+         * AROS apps built around BIO_new_ssl_connect() (e.g. AmiTranslate)
+         * never call SSL_set_tlsext_host_name(). Derive the server name from
+         * the underlying connect BIO and set it before the handshake runs.
+         *
+         * AmiTranslate additionally calls BIO_C_DO_STATE_MACHINE BEFORE
+         * BIO_C_SET_CONNECT. On the first invocation the connect BIO's
+         * hostname is still NULL, so SSL_do_handshake builds a ClientHello
+         * WITHOUT SNI into the internal buffer (stale). On the SECOND call
+         * (post-SET_CONNECT) the hostname is available: we detect the stale
+         * state, SSL_clear to drop the stale ClientHello, set SNI, then let
+         * SSL_do_handshake build a fresh ClientHello WITH SNI.
+         *
+         * We do NOT defer/return early because Free Pascal's BIO_ctrl
+         * wrapper may treat a -1 return differently than the normal
+         * SSL_ERROR_WANT_CONNECT from the connect BIO, causing the
+         * Connect function to abort before SET_CONNECT is reached.
+         */
+        if (SSL_is_server(ssl) == 0 && next != NULL) {
+            const char *host = NULL;
+            long r = BIO_ctrl(next, BIO_C_GET_CONNECT, 0, (void *)&host);
+            if (r > 0 && host != NULL && host[0] != '\0') {
+                       if (SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name) == NULL) {
+                    if (SSL_in_init(ssl)) {
+                        SSL_clear(ssl);
+                    }
+                    ossl_ctrl_internal(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                        TLSEXT_NAMETYPE_host_name, (void *)host,
+                        /*no_quic=*/0);
+                }
+            }
+        }
+#endif
+
         BIO_set_retry_reason(b, 0);
+#if defined(__AROS__)
+        /*
+         * On real AROS the connect BIO creates a blocking socket; TCP connect
+         * can freeze the GUI thread for 30-120s.  Set the connect BIO to
+         * non-blocking mode so the handshake returns quickly with WANT_CONNECT.
+         * Retry internally for up to ~500ms so AmiTranslate's single-shot
+         * BIO_C_DO_STATE_MACHINE call still completes the handshake.
+         */
+        if (SSL_is_server(ssl) == 0 && next != NULL) {
+            const char *host = NULL;
+            BIO_ctrl(next, BIO_C_GET_CONNECT, 0, (void *)&host);
+            if (host != NULL && host[0] != '\0')
+                BIO_ctrl(next, BIO_C_SET_CONNECT_MODE,
+                         BIO_SOCK_NONBLOCK, NULL);
+        }
+#endif
         ret = (int)SSL_do_handshake(ssl);
+#if defined(__AROS__)
+        if (ret <= 0 && SSL_is_server(ssl) == 0) {
+            int serr = SSL_get_error(ssl, (int)ret);
+            int spin;
+            for (spin = 0; spin < 15000; spin++) {
+                if (serr == SSL_ERROR_WANT_CONNECT
+                    || serr == SSL_ERROR_WANT_READ
+                    || serr == SSL_ERROR_WANT_WRITE) {
+                    ret = (int)SSL_do_handshake(ssl);
+                    if (ret == 1)
+                        break;
+                    serr = SSL_get_error(ssl, (int)ret);
+                } else {
+                    break;
+                }
+            }
+        }
+#endif
 
         switch (SSL_get_error(ssl, (int)ret)) {
         case SSL_ERROR_WANT_READ:

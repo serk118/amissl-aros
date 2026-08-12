@@ -94,9 +94,19 @@ cat test.txt
   1. Skip d2i_X509 (certbytes += cert_len)
   2. Create dummy EVP_PKEY when X509_get0_pubkey returns NULL
   3. Skip ssl_cert_lookup_by_pkey check
+- Fix 15: NST ticket→session-ID hash via legacy SHA256 (provider fetch fails on AROS)
+- Fix 16 (Aug 5): AROS legacy sig-verify path — `arossl_raw_digest`,
+  `arossl_mgf1`, `arossl_rsa_pss_verify` (helpers ~lines 36-260), dispatch in
+  `tls_process_key_exchange` (~2719-2887). CURRENT BLOCKER: `ECDSA_verify`
+  returns 0 (bad signature).
+
+### openssl/crypto/x509/x_pubkey.c
+- `flag_force_legacy` → forces `ameth->pub_decode` (legacy path) so the peer
+  cert pubkey is returned as a legacy EC/RSA/DSA key (provider decode unusable on AROS).
 
 ### openssl/ssl/s3_lib.c
 - Fix 13: EC keygen fallback — try EVP_PKEY_Q_keygen, fall back to P-256 EC_KEY
+- `[PARAM-GEN]`/`[EC-GEN-OK]` debug markers
 
 ### openssl/ssl/s3_enc.c
 - EVP_DigestInit_ex provider hang bypass on AROS
@@ -104,6 +114,9 @@ cat test.txt
 ### src/aros/amissl_missing_stubs.c
 - Fix 11: CRYPTO_zalloc/calloc fallback when AllocVec returns NULL
 
-### AROS kernel source (not deployed, needs full rebuild):
-- `rom/dos/internalloadseg_elf.c` — PC32 formula fix: subtract 4
-- `bootstrap/elfloader.c` — same PC32 fix
+### AROS kernel source (NOT NEEDED — Fix 14 worked around the issue in-library):
+- `rom/dos/internalloadseg_elf.c` — PC32 formula fix: subtract 4 (historical, July 2026)
+- `bootstrap/elfloader.c` — same PC32 fix (historical)
+- These were the July blocker. Fix 14 (`"p"(&local_it)` in asn1t.h) generates
+  `R_X86_64_32S` relocations which the AROS Exec DOES process, so no kernel
+  rebuild is required. Keep these notes only if cert parsing ever regresses.

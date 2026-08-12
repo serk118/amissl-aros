@@ -13,6 +13,14 @@
 #include "bio_local.h"
 #include "internal/bio_tfo.h"
 #include "internal/ktls.h"
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+# include <netdb.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
+# include <string.h>
+#endif
 
 #ifndef OPENSSL_NO_SOCK
 
@@ -108,10 +116,72 @@ err:
     return 0;
 }
 
+#include "internal/arossl_dbg.h"
 static int conn_state(BIO *b, BIO_CONNECT *c)
 {
     int ret = -1, i, opts;
     BIO_info_cb *cb = NULL;
+
+    arossl_dbg_val("[CON-ST] entered state", (long)c->state);
+
+#if defined(__AROS__)
+    /*
+     * On AROS, bypass the connect-BIO state machine entirely.  The
+     * BEFORE->GET_ADDR->CREATE_SOCKET->CONNECT flow uses non-blocking
+     * sockets and errno-dependent retry logic that loops on real AROS
+     * ("slow internet" symptom).  Do a simple blocking DNS+socket+
+     * connect instead — same path httpget_default uses, proven working.
+     */
+    if (c->state == BIO_CONN_S_BEFORE || c->state == BIO_CONN_S_GET_ADDR) {
+        struct hostent *he;
+        struct sockaddr_in addr;
+        int sock;
+
+        if (c->param_hostname == NULL) {
+            ERR_raise(ERR_LIB_BIO, BIO_R_NO_HOSTNAME_OR_SERVICE_SPECIFIED);
+            goto exit_loop;
+        }
+
+        he = gethostbyname(c->param_hostname);
+        if (he == NULL) {
+            ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
+                "calling gethostbyname(%s)", c->param_hostname);
+            c->state = BIO_CONN_S_CONNECT_ERROR;
+            ret = 0;
+            goto exit_loop;
+        }
+
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(c->param_service != NULL
+            ? (unsigned short)atoi(c->param_service) : 443);
+        memcpy(&addr.sin_addr, he->h_addr_list[0], (size_t)he->h_length);
+
+        sock = BIO_socket(AF_INET, c->connect_sock_type, 0, 0);
+        if (sock == (int)INVALID_SOCKET) {
+            ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
+                "calling socket()");
+            ERR_raise(ERR_LIB_BIO, BIO_R_UNABLE_TO_CREATE_SOCKET);
+            c->state = BIO_CONN_S_CONNECT_ERROR;
+            ret = 0;
+            goto exit_loop;
+        }
+
+        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
+                "calling connect(%s)", c->param_hostname);
+            BIO_closesocket(sock);
+            c->state = BIO_CONN_S_CONNECT_ERROR;
+            ret = 0;
+            goto exit_loop;
+        }
+
+        b->num = sock;
+        c->state = BIO_CONN_S_OK;
+        ret = 1;
+        goto exit_loop;
+    }
+#endif
 
     if (c->info_callback != NULL)
         cb = c->info_callback;
@@ -173,7 +243,8 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
         case BIO_CONN_S_CREATE_SOCKET:
             ret = BIO_socket(BIO_ADDRINFO_family(c->addr_iter),
                 BIO_ADDRINFO_socktype(c->addr_iter),
-                BIO_ADDRINFO_protocol(c->addr_iter), 0);
+                BIO_ADDRINFO_protocol(c->addr_iter),
+                c->connect_mode);
             if (ret == (int)INVALID_SOCKET) {
                 ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
                     "calling socket(%s, %s)",
@@ -323,9 +394,15 @@ static void conn_close_socket(BIO *bio)
 
     c = (BIO_CONNECT *)bio->ptr;
     if (bio->num != (int)INVALID_SOCKET) {
+#if defined(AMISSL_HOSTED_AROS)
+        arossl_dbg_msg("[CCS] conn_close_socket\n");
+#endif
         /* Only do a shutdown if things were established */
         if (c->state == BIO_CONN_S_OK)
             shutdown(bio->num, 2);
+#if defined(AMISSL_HOSTED_AROS)
+        arossl_dbg_msg("[CCS-close]\n");
+#endif
         BIO_closesocket(bio->num);
         bio->num = (int)INVALID_SOCKET;
     }

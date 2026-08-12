@@ -785,6 +785,10 @@ SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, SSL *user_ssl,
 
     s->mode = ctx->mode;
     s->max_cert_list = ctx->max_cert_list;
+#if defined(__AROS__)
+    arossl_dbg_val("[SNEW-cl]", (long)ctx->max_cert_list);
+    arossl_dbg_val("[SNEW-sl]", (long)s->max_cert_list);
+#endif
     s->max_early_data = ctx->max_early_data;
     s->recv_max_early_data = ctx->recv_max_early_data;
 
@@ -4134,6 +4138,9 @@ SSL_CTX *SSL_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq,
     /* We take the system default. */
     ret->session_timeout = meth->get_timeout();
     ret->max_cert_list = SSL_MAX_CERT_LIST_DEFAULT;
+#if defined(__AROS__)
+    arossl_dbg_val("[CTXN-mcl]", (long)ret->max_cert_list);
+#endif
     ret->verify_mode = SSL_VERIFY_NONE;
 done:
 
@@ -4566,6 +4573,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
     ret->method = meth;
     ret->min_proto_version = 0;
     ret->max_proto_version = 0;
+    ret->max_cert_list = SSL_MAX_CERT_LIST_DEFAULT;
     ret->session_cache_mode = SSL_SESS_CACHE_SERVER;
     ret->session_cache_size = SSL_SESSION_CACHE_MAX_SIZE_DEFAULT;
     ret->session_timeout = meth->get_timeout();
@@ -4584,13 +4592,43 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
         return NULL;
     }
     /* Populate the cipher list so SSL_get_ciphers() works. */
-    if (!SSL_CTX_set_ciphersuites(ret, OSSL_default_ciphersuites())) {
 #if defined(__AROS__)
-        ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_CIPHERSUI);
-#endif
+    /* AROS: the string path (OSSL_default_ciphersuites -> CONF_parse_list ->
+     * ciphersuite_cb -> ssl3_get_cipher_by_std_name) relies on .rodata string
+     * literals that do not resolve on real hardware, so every default TLS 1.3
+     * name fails its strcmp and SSL_CTX_new dies with SSL_R_NO_CIPHER_MATCH.
+     * Populate the stack directly by ID from the .data tls13_ciphers[] table
+     * instead (same ciphers, same order as OSSL_default_ciphersuites()). */
+    {
+        static const uint32_t aros_tls13_default_ids[] = {
+            TLS1_3_CK_AES_256_GCM_SHA384,
+            TLS1_3_CK_CHACHA20_POLY1305_SHA256,
+            TLS1_3_CK_AES_128_GCM_SHA256
+        };
+        const SSL_CIPHER *c;
+        size_t ai;
+
+        ret->tls13_ciphersuites = sk_SSL_CIPHER_new_null();
+        if (ret->tls13_ciphersuites == NULL) {
+            ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_CIPHERSUI);
+            SSL_CTX_free(ret);
+            return NULL;
+        }
+        for (ai = 0; ai < OSSL_NELEM(aros_tls13_default_ids); ai++) {
+            c = ssl3_get_cipher_by_id(aros_tls13_default_ids[ai]);
+            if (c == NULL || !sk_SSL_CIPHER_push(ret->tls13_ciphersuites, c)) {
+                ERR_raise(ERR_LIB_SSL, AROS_CTXNEW_MARK_CIPHERSUI);
+                SSL_CTX_free(ret);
+                return NULL;
+            }
+        }
+    }
+#else
+    if (!SSL_CTX_set_ciphersuites(ret, OSSL_default_ciphersuites())) {
         SSL_CTX_free(ret);
         return NULL;
     }
+#endif
     ssl_create_cipher_list(ret,
         ret->tls13_ciphersuites,
         &ret->cipher_list,

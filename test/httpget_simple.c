@@ -290,11 +290,15 @@ int main(int argc, char **argv)
     if (!(SocketBase = OpenLibrary("bsdsocket.library", 4))) return 1;
     SetErrnoPtr(&errno, sizeof(errno));
     if (!(AmiSSLBase = OpenLibrary("amissl_v362.library", 0))) return 1;
-    AmiSSLExtBase = AmiSSLBase;
-    { struct TagItem t[3]; t[0].ti_Tag = AmiSSL_SocketBase; t[0].ti_Data = (IPTR)SocketBase;
-      t[1].ti_Tag = AmiSSL_ErrNoPtr; t[1].ti_Data = (IPTR)&errno; t[2].ti_Tag = TAG_END;
+    AmiSSLExtBase = NULL;
+    { struct TagItem t[4]; t[0].ti_Tag = AmiSSL_SocketBase; t[0].ti_Data = (IPTR)SocketBase;
+      t[1].ti_Tag = AmiSSL_ErrNoPtr; t[1].ti_Data = (IPTR)&errno;
+      t[2].ti_Tag = AmiSSL_GetAmiSSLExtBase; t[2].ti_Data = (IPTR)&AmiSSLExtBase;
+      t[3].ti_Tag = TAG_END;
       InitAmiSSLA(t); }
+#if !defined(__AROS__)
     OSSL_PROVIDER_load(NULL, "default");
+#endif
     EVP_add_digest(EVP_sha256()); EVP_add_digest(EVP_sha384());
     EVP_add_cipher(EVP_aes_256_gcm()); EVP_add_cipher(EVP_aes_128_gcm()); EVP_add_cipher(EVP_chacha20_poly1305());
     ctx = SSL_CTX_new(TLS_client_method());

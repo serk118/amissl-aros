@@ -22,9 +22,14 @@ LONG (shutdown)(LONG sockfd, LONG how)
 #endif
 {
 #if defined(__AROS__)
-  GETSOCKET();
-  if(SocketBase) return shutdown(sockfd, how);
-  else return -1;
+  /*
+   * AROS bsdsocket.library does not reliably implement shutdown() on
+   * all variants (hosted raises _aros_not_implemented trap).
+   * This is only a courtesy before close() — skipping it is harmless.
+   */
+  (void)sockfd;
+  (void)how;
+  return 0;
 #elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->shutdown(sockfd, how);

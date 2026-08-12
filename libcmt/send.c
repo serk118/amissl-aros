@@ -5,10 +5,18 @@
 
 #if defined(__AROS__)
 #include <proto/bsdsocket.h>
+#include <internal/arossl_dbg.h>
 int (send)(int sockfd, const void *buf, int len, int flags)
 {
   extern struct Library *SocketBase;
-  if(SocketBase) return send(sockfd, buf, len, flags);
+  arossl_dbg_val("snd-fd", sockfd);
+  arossl_dbg_val("snd-len", len);
+  if(SocketBase) {
+    int _r = send(sockfd, buf, len, flags);
+    arossl_dbg_val("snd-ret", _r);
+    arossl_dbg_val("snd-err", (long)Errno());
+    return _r;
+  }
   else return -1;
 }
 #elif defined(__amigaos4__)

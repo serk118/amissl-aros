@@ -6,10 +6,17 @@
 
 #if defined(__AROS__)
 #include <proto/bsdsocket.h>
+#include <internal/arossl_dbg.h>
 int (connect)(int sockfd, struct sockaddr *addr, socklen_t addrlen)
 {
   GETSOCKET();
-  if(SocketBase) return connect(sockfd, addr, addrlen);
+  if(SocketBase) {
+    int _r = connect(sockfd, addr, addrlen);
+    arossl_dbg_val("cn-fd", sockfd);
+    arossl_dbg_val("cn-ret", _r);
+    arossl_dbg_val("cn-err", (long)Errno());
+    return _r;
+  }
   else return -1;
 }
 #elif defined(__amigaos4__)

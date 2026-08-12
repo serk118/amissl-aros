@@ -31,6 +31,7 @@
 
 #if defined(__AROS__)
 #include <proto/bsdsocket.h>
+#include <internal/arossl_dbg.h>
 #elif defined(__amigaos4__)
 #undef __USE_INLINE__
 #include <proto/bsdsocket.h>
@@ -52,7 +53,11 @@
 LONG (socket)(LONG domain, LONG type, LONG protocol)
 {
   GETSOCKET();
-  if(SocketBase) return socket(domain, type, protocol);
+  if(SocketBase) {
+    LONG _s = socket(domain, type, protocol);
+    arossl_dbg_val("sk-ret", _s);
+    return _s;
+  }
   else return -1;
 }
 #elif defined(__amigaos4__)
@@ -141,10 +146,8 @@ void initialize_socket_errno(AMISSL_STATE *state)
 
 			if (SocketBase)
 			{
-				/* serk118: skip SocketBaseTagList on AROS for now - function may not be available */
-				#if !defined(__AROS__)
+				/* AROS supports SocketBaseTagList for errno wiring */
 				SocketBaseTagList(tags);
-				#endif
 			}
 		}
 	}

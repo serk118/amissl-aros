@@ -28,6 +28,9 @@
 #include <openssl/core_names.h>
 #include <openssl/param_build.h>
 #include "internal/cryptlib.h"
+#if defined(__AROS__)
+# include "internal/arossl_dbg.h"
+#endif
 #include "internal/comp.h"
 #include "internal/ssl_unwrap.h"
 #include <openssl/ocsp.h>
@@ -1443,7 +1446,12 @@ CON_FUNC_RETURN tls_construct_client_hello(SSL_CONNECTION *s, WPACKET *pkt)
             &s->ext.supportedgroups, &s->ext.supportedgroups_len,
             &s->ext.keyshares, &s->ext.keyshares_len,
             &s->ext.tuples, &s->ext.tuples_len,
-            "P-256:P-384:P-521:X25519:X448");
+            "P-256:P-384:P-521");
+#if defined(__AROS__)
+        arossl_dbg_val("[GRP-sg]", (long)s->ext.supportedgroups);
+        arossl_dbg_val("[GRP-sg0]", (long)(s->ext.supportedgroups != NULL ? s->ext.supportedgroups[0] : 0));
+        arossl_dbg_val("[GRP-ks0]", (long)(s->ext.keyshares != NULL && s->ext.keyshares_len > 0 ? s->ext.keyshares[0] : 0));
+#endif
     }
 #endif
 
@@ -1484,10 +1492,12 @@ CON_FUNC_RETURN tls_construct_client_hello(SSL_CONNECTION *s, WPACKET *pkt)
         i = (s->hello_retry_request == SSL_HRR_NONE);
     }
 
+    arossl_dbg_msg("[CH] filling random\n");
     if (i && ssl_fill_hello_random(s, 0, p, sizeof(s->s3.client_random), DOWNGRADE_NONE) <= 0) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
         return CON_FUNC_ERROR;
     }
+    arossl_dbg_msg("[CH] random filled\n");
 
     /*-
      * version indicates the negotiated version: for example from
@@ -2671,6 +2681,7 @@ static int tls_process_ske_ecdhe(SSL_CONNECTION *s, PACKET *pkt, EVP_PKEY **pkey
         return 0;
     }
 
+    arossl_dbg_msg("[CH] decoding peer key\n");
     if (!PACKET_get_length_prefixed_1(pkt, &encoded_pt)) {
         SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
         return 0;
@@ -2680,9 +2691,11 @@ static int tls_process_ske_ecdhe(SSL_CONNECTION *s, PACKET *pkt, EVP_PKEY **pkey
             PACKET_data(&encoded_pt),
             PACKET_remaining(&encoded_pt))
         <= 0) {
+        arossl_dbg_msg("[CH] decode failed\n");
         SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_ECPOINT);
         return 0;
     }
+    arossl_dbg_msg("[CH] peer key decoded\n");
 
     /*
      * The ECC/TLS specification does not mention the use of DSA to sign

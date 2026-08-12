@@ -95,12 +95,15 @@ int LIB_ossl_crypto_thread_native_perform_join(struct Library * _base, void * __
  * AllocVec/FreeVec. These override the AUTOINIT dispatch stubs from
  * amissl_stubs_aros.c because this .o is placed first in the link order
  * (GNU ld's --allow-multiple-definition uses the FIRST definition). */
+#include <stdlib.h>
 void *(CRYPTO_malloc)(size_t num, const char *file, int line)
 {
     (void)file; (void)line;
     if (num == 0)
         num = 1;
-    return AllocVec(num, MEMF_ANY);
+    void *p = AllocVec(num, MEMF_ANY);
+    if (p == NULL && num > 0) p = malloc(num);
+    return p;
 }
 
 void (CRYPTO_free)(void *ptr, const char *file, int line)
@@ -115,7 +118,9 @@ void *(CRYPTO_zalloc)(size_t num, const char *file, int line)
     (void)file; (void)line;
     if (num == 0)
         num = 1;
-    return AllocVec(num, MEMF_CLEAR);
+    void *p = AllocVec(num, MEMF_CLEAR);
+    if (p == NULL && num > 0) p = calloc(1, num);
+    return p;
 }
 
 void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
@@ -125,6 +130,7 @@ void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
         if (num == 0)
             num = 1;
         void *p = AllocVec(num, MEMF_ANY);
+        if (p == NULL && num > 0) p = malloc(num);
         return p;
     }
     if (num == 0) {
@@ -132,6 +138,7 @@ void *(CRYPTO_realloc)(void *addr, size_t num, const char *file, int line)
         return NULL;
     }
     void *p = AllocVec(num, MEMF_ANY);
+    if (p == NULL && num > 0) p = malloc(num);
     if (p == NULL)
         return NULL;
     unsigned char *src = (unsigned char *)addr;

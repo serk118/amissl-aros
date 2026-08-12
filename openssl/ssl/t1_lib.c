@@ -810,7 +810,12 @@ int ssl_load_sigalgs(SSL_CTX *ctx)
             return 0;
         for (i = 0; i < ctx->sigalg_list_len; i++) {
             const char *keytype = inferred_keytype(&ctx->sigalg_list[i]);
+            ERR_set_mark();
+            /* "EC"/"RSA" fallback keytypes are NOT registered OBJ names;
+             * OBJ_txt2nid fails and raises OBJ_R_UNKNOWN_OBJECT_NAME every
+             * run (pollutes the queue, looks like corruption).  Discard it. */
             ctx->ssl_cert_info[i].pkey_nid = OBJ_txt2nid(keytype);
+            ERR_pop_to_mark();
             ctx->ssl_cert_info[i].amask = SSL_aANY;
         }
     }
@@ -943,8 +948,25 @@ void tls1_get_supported_groups(SSL_CONNECTION *s, const uint16_t **pgroups,
         break;
 
     default:
+#if defined(__AROS__)
+        /*
+         * AROS: tls_construct_client_hello sets the SSL-level group list
+         * (P-256/P-384/P-521 only) because the provider layer cannot generate
+         * X25519/X448 keys. The extension builders read the CTX-level list
+         * here, which is normally NULL on AROS (dispatch-based SSL_CTX_set1_
+         * groups never ran), so they would fall through to fallback_group_ids
+         * which still advertises X25519/X448. Prefer the SSL-level list.
+         */
+        *pgroups = s->ext.supportedgroups;
+        *pgroupslen = s->ext.supportedgroups_len;
+        if (*pgroups == NULL || *pgroupslen == 0) {
+            *pgroups = sctx->ext.supportedgroups;
+            *pgroupslen = sctx->ext.supportedgroups_len;
+        }
+#else
         *pgroups = sctx->ext.supportedgroups;
         *pgroupslen = sctx->ext.supportedgroups_len;
+#endif
         /* Fallback: if provider didn't populate groups, use hardcoded list */
         if (*pgroups == NULL || *pgroupslen == 0) {
             *pgroups = fallback_group_ids;

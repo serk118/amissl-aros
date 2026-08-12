@@ -18,6 +18,7 @@
 #include "internal/ssl_unwrap.h"
 #include <openssl/rand.h>
 #include "../ssl_local.h"
+#include "internal/arossl_dbg.h"
 #include "statem_local.h"
 #include <assert.h>
 #include "internal/arossl_dbg.h"
@@ -374,6 +375,8 @@ static int state_machine(SSL_CONNECTION *s, int server)
     SSL *ssl = SSL_CONNECTION_GET_SSL(s);
     SSL *ussl = SSL_CONNECTION_GET_USER_SSL(s);
 
+    arossl_dbg_val("[SM] entered state", (long)st->state);
+
     _sm_step = 1;
     if (st->state == MSG_FLOW_ERROR) {
         _sm_step = 2;
@@ -476,7 +479,17 @@ static int state_machine(SSL_CONNECTION *s, int server)
     }
 
     _sm_step = 17;
+#if defined(__AROS__)
+    {
+        int _loopcnt = 0;
+#endif
     while (st->state != MSG_FLOW_FINISHED) {
+#if defined(__AROS__)
+        if (++_loopcnt > 100) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_SSL_HANDSHAKE_FAILURE);
+            goto end;
+        }
+#endif
         _sm_step = 18;
         if (st->state == MSG_FLOW_READING) {
             _sm_step = 19;
@@ -506,6 +519,9 @@ static int state_machine(SSL_CONNECTION *s, int server)
             goto end;
         }
     }
+#if defined(__AROS__)
+    } /* close _loopcnt scope */
+#endif
 
     _sm_step = 23;
     ret = 1;
@@ -658,6 +674,13 @@ static SUB_STATE_RETURN read_state_machine(SSL_CONNECTION *s)
                 return SUB_STATE_ERROR;
 
             if (s->s3.tmp.message_size > max_message_size(s)) {
+#if defined(__AROS__)
+                arossl_dbg_val("[MAXMSG-size]", (long)s->s3.tmp.message_size);
+                arossl_dbg_val("[MAXMSG-maxm]", (long)max_message_size(s));
+                arossl_dbg_val("[MAXMSG-hand]", (long)s->statem.hand_state);
+                arossl_dbg_val("[MAXMSG-mtype]", (long)s->s3.tmp.message_type);
+                arossl_dbg_val("[MAXMSG-msglen]", (long)s->init_num);
+#endif
                 SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER,
                     SSL_R_EXCESSIVE_MESSAGE_SIZE);
                 return SUB_STATE_ERROR;

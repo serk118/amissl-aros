@@ -359,6 +359,26 @@ ASN1_OBJECT *OBJ_txt2obj(const char *s, int no_name)
             return OBJ_nid2obj(nid);
         }
         if (!ossl_isdigit(*s)) {
+#if defined(__AROS__)
+            /* AROS diagnostic: identify EVERY failing OBJ name, so the
+             * surviving OBJ_R_UNKNOWN_OBJECT_NAME error is always preceded
+             * by its markers (earlier marked-region raises get cleared along
+             * with their markers by ERR_pop_to_mark).  Push BEFORE the real
+             * error so ERR_peek sees them first.  reason 0xE00 | (len&0x1F)
+             * = length, then 0xE40 | (char&0xFF) per char (max 4).
+             * 'E'=0x45 -> 0xE45, 'C'=0x43 -> 0xE43. */
+            {
+                size_t nl, i;
+                const size_t maxc = 4;
+
+                nl = strlen(s);
+                if (nl > maxc)
+                    nl = maxc;
+                ERR_raise(ERR_LIB_OBJ, 0xE00 | (int)(nl & 0x1F));
+                for (i = 0; i < nl; i++)
+                    ERR_raise(ERR_LIB_OBJ, 0xE40 | (s[i] & 0xFF));
+            }
+#endif
             ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_OBJECT_NAME);
             return NULL;
         }

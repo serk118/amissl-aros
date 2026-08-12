@@ -91,6 +91,15 @@ int BIO_connect(int sock, const BIO_ADDR *addr, int options)
         return 0;
 
     if (options & BIO_SOCK_KEEPALIVE) {
+#if defined(__AROS__)
+        /*
+         * AROS bsdsocket may not translate SO_KEEPALIVE (optname=8 in
+         * AmiTCP). A failed setsockopt makes BIO_connect return 0,
+         * which sends the connect state-machine into retry/error ->
+         * endless loop -> "slow internet" symptom on real AROS.
+         */
+        (void)on;
+#else
         if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
                 (const void *)&on, sizeof(on))
             != 0) {
@@ -99,6 +108,7 @@ int BIO_connect(int sock, const BIO_ADDR *addr, int options)
             ERR_raise(ERR_LIB_BIO, BIO_R_UNABLE_TO_KEEPALIVE);
             return 0;
         }
+#endif
     }
 
     if (options & BIO_SOCK_NODELAY) {
@@ -111,6 +121,7 @@ int BIO_connect(int sock, const BIO_ADDR *addr, int options)
             return 0;
         }
     }
+
     if (options & BIO_SOCK_TFO) {
 #if defined(OSSL_TFO_CLIENT_FLAG)
 #if defined(OSSL_TFO_SYSCTL_CLIENT)

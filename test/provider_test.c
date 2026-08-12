@@ -132,13 +132,16 @@ int main(void)
     if (!(SocketBase = OpenLibrary("bsdsocket.library", 4))) return 1;
     SetErrnoPtr(&errno, sizeof(errno));
     if (!(AmiSSLBase = OpenLibrary("amissl_v362.library", 0))) return 1;
-    AmiSSLExtBase = AmiSSLBase;
-    { struct TagItem t[3]; t[0].ti_Tag = AmiSSL_SocketBase;
+    AmiSSLExtBase = NULL;
+    { struct TagItem t[4]; t[0].ti_Tag = AmiSSL_SocketBase;
       t[0].ti_Data = (IPTR)SocketBase;
       t[1].ti_Tag = AmiSSL_ErrNoPtr;
       t[1].ti_Data = (IPTR)&errno;
-      t[2].ti_Tag = TAG_END;
+      t[2].ti_Tag = AmiSSL_GetAmiSSLExtBase;
+      t[2].ti_Data = (IPTR)&AmiSSLExtBase;
+      t[3].ti_Tag = TAG_END;
       InitAmiSSLA(t); }
+    RESULT("AmiSSLBase=%p AmiSSLExtBase=%p", AmiSSLBase, AmiSSLExtBase);
 
     TEST("RAND_bytes / RAND_priv_bytes");          t_rand();
     TEST("EVP_PKEY_CTX_new_id(EC)");               t_evp_keygen();

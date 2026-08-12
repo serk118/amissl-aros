@@ -115,3 +115,25 @@ but RAND_bytes LCG (which also uses uint64_t multiplication) works fine?
 - Possible causes: invalid write buffer (TLS_BUFFER_get_left returns
   garbage), BIO chain corruption, or AROS-specific socket issue
 - **Status:** UNRESOLVED — needs further investigation
+
+## Aug 12, 2026 — Handshake Loop Investigation
+
+### Discovered: Parallel AR/ld Race (Build Corruption)
+- **Problem:** `httpget_bio` on hosted AROS hung after connect with a fresh
+  marker build.
+- **Root Cause:** The `Makefile` parallel build has a race where `libcmt.a` or the
+  final library link can use stale/incomplete archives. This produced a
+  "corrupted" library that hung during handshake.
+- **Fix:** Performed a truly clean rebuild (`rm -rf build_aros-x86_64`).
+- **Result:** **FIXED.** `httpget_bio` now works end-to-end on hosted AROS:
+  SNI set → connect → ClientHello → ServerHello/Cert/SKE → Handshake SUCCESS.
+
+### Errno Wiring Gap (SocketBaseTagList)
+- **Problem:** AROS skipped `SocketBaseTagList` in `libcmt/socket.c`, meaning
+  bsdsocket's `errno` was not wired into AmiSSL's state.
+- **Fix:** Enabled `SocketBaseTagList` for AROS. Ensures correct socket error
+  reporting and reliable non-blocking retry behavior.
+
+### Native 0-syscall Build
+- **Status:** Produced a clean release build for real AROS. Verified 0 syscalls.
+  Ready for hardware test.

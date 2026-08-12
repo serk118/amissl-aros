@@ -2287,9 +2287,20 @@ int ssl_cert_is_disabled(SSL_CTX *ctx, size_t idx)
  * SSL_DEFAULT_CIPHER_LIST deprecated in 3.0.0
  * Update both macro and function simultaneously
  */
+#if defined(__AROS__)
+/* AROS: .rodata string literals do not resolve on real hardware, so the
+ * string is forced into .data (non-const static) where the loader applies
+ * relocations correctly. */
+static char aros_default_cipher_list[] = "ALL:!COMPLEMENTOFDEFAULT:!eNULL";
+#endif
+
 const char *OSSL_default_cipher_list(void)
 {
+#if defined(__AROS__)
+    return aros_default_cipher_list;
+#else
     return "ALL:!COMPLEMENTOFDEFAULT:!eNULL";
+#endif
 }
 
 /*
@@ -2297,9 +2308,21 @@ const char *OSSL_default_cipher_list(void)
  * TLS_DEFAULT_CIPHERSUITES deprecated in 3.0.0
  * Update both macro and function simultaneously
  */
+#if defined(__AROS__)
+/* See OSSL_default_cipher_list(): forced into .data for the same reason. */
+static char aros_default_ciphersuites[] =
+    "TLS_AES_256_GCM_SHA384:"
+    "TLS_CHACHA20_POLY1305_SHA256:"
+    "TLS_AES_128_GCM_SHA256";
+#endif
+
 const char *OSSL_default_ciphersuites(void)
 {
+#if defined(__AROS__)
+    return aros_default_ciphersuites;
+#else
     return "TLS_AES_256_GCM_SHA384:"
            "TLS_CHACHA20_POLY1305_SHA256:"
            "TLS_AES_128_GCM_SHA256";
+#endif
 }

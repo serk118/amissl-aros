@@ -473,7 +473,7 @@ APPS =  $(BUILD_D)/amisslmaster_test $(BUILD_D)/amissl_v$(VERSIONNAME)_test \
         $(BUILD_D)/https $(BUILD_D)/httpget $(BUILD_D)/run_all_tests \
         $(BUILD_D)/amissl_simple_test $(BUILD_D)/tcp_test \
         $(BUILD_D)/simple_bsd
-APPS += $(BUILD_D)/httpget_simple $(BUILD_D)/httpget_default
+APPS += $(BUILD_D)/httpget_simple $(BUILD_D)/httpget_default $(BUILD_D)/httpget_bio
 ifneq ($(OS), aros-x86_64)
 APPS += $(BUILD_D)/uitest $(BUILD_D)/vatest
 endif
@@ -539,7 +539,7 @@ $(BUILD_D)/openssl/Makefile: $(BUILD_D)/openssl
 	@sh tools/cpheaders.sh $(BUILD_D)
 
 $(LIBCRYPTO): $(BUILD_D)/openssl/Makefile
-	@$(MAKE) -C $(BUILD_D)/openssl -f Makefile CC="$(CC) $(SYSROOT) -mstackrealign" OPENSSLDIR=AmiSSL: ENGINESDIR=AmiSSL:engines MODULESDIR=AmiSSL:modules RANLIB=$(RANLIB) libcrypto.a libssl.a
+	@$(MAKE) -C $(BUILD_D)/openssl -f Makefile CC="$(CC) $(SYSROOT) -mstackrealign $(if $(filter 1,$(HOSTED_AROS_MARK)),-DAMISSL_HOSTED_AROS)" OPENSSLDIR=AmiSSL: ENGINESDIR=AmiSSL:engines MODULESDIR=AmiSSL:modules RANLIB=$(RANLIB) libcrypto.a libssl.a
 	@echo "  [PATCH] Replacing context.o and threads_amissl.o in libcrypto.a"
 	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c openssl/crypto/context.c -o $(BUILD_D)/openssl/context.o 2>/dev/null || true
 	$(CC) $(CFLAGS) -I./openssl/crypto/include -I./openssl -I./openssl/include -c openssl/crypto/threads_amissl.c -o $(BUILD_D)/openssl/threads_amissl.o 2>/dev/null || true
@@ -554,7 +554,7 @@ build_docs:
 ## LIBCMT BUILD RULES ##
 
 $(LIBCMT): $(BUILD_D)/libcmt libcmt
-	$(MAKE) -C libcmt CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) OS=$(OS) CPU="$(CPU) $(STANDARD)" SYSROOT="$(SYSROOT)" BUILD_D=../$(BUILD_D)/libcmt
+	$(MAKE) -C libcmt CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) OS=$(OS) CPU="$(CPU) $(STANDARD)" SYSROOT="$(SYSROOT)" BUILD_D=../$(BUILD_D)/libcmt HOSTED_AROS=$(HOSTED_AROS_MARK)
 
 ## AMISSL BUILD RULES ##
 
@@ -681,6 +681,10 @@ $(BUILD_D)/httpget_simple_tls13: $(TEST_D)/httpget_simple_tls13.c
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 
 $(BUILD_D)/httpget_default: $(TEST_D)/httpget_default.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
+
+$(BUILD_D)/httpget_bio: $(TEST_D)/httpget_bio.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 

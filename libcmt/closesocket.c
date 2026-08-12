@@ -18,9 +18,14 @@
 int (closesocket)(int s)
 {
 #if defined(__AROS__)
+#if defined(AMISSL_HOSTED_AROS)
+  (void)s;
+  return 0;
+#else
   GETSOCKET();
   if(SocketBase) return closesocket(s);
   else return -1;
+#endif
 #elif defined(__amigaos4__)
   GETISOCKET();
   if(ISocket) return ISocket->CloseSocket(s);

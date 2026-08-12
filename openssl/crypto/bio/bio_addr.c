@@ -43,6 +43,8 @@ static CRYPTO_ONCE bio_lookup_init = CRYPTO_ONCE_STATIC_INIT;
  * getservbyname and a few other.
  */
 
+#include "internal/arossl_dbg.h"
+
 /**********************************************************************
  *
  * Address structure
@@ -652,6 +654,7 @@ int BIO_lookup(const char *host, const char *service,
     enum BIO_lookup_type lookup_type,
     int family, int socktype, BIO_ADDRINFO **res)
 {
+    arossl_dbg_msg("[BIO] lookup entered\n");
     return BIO_lookup_ex(host, service, lookup_type, family, socktype, 0, res);
 }
 
