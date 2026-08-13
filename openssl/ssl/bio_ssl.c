@@ -122,6 +122,10 @@ static int ssl_read(BIO *b, char *buf, size_t size, size_t *readbytes)
     int retry_reason = 0;
     int r = 0;
 
+#if defined(__AROS__)
+    aros_dbg_file("[RD] ssl_read\n");
+#endif
+
     if (buf == NULL)
         return 0;
     sb = BIO_get_data(b);
@@ -189,6 +193,10 @@ static int ssl_write(BIO *b, const char *buf, size_t size, size_t *written)
     int ret, r = 0;
     int retry_reason = 0;
     SSL *ssl;
+
+#if defined(__AROS__)
+    aros_dbg_file("[WR] ssl_write\n");
+#endif
     BIO_SSL *bs;
 
     if (buf == NULL)
@@ -442,6 +450,12 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
 #endif
         ret = (int)SSL_do_handshake(ssl);
 #if defined(__AROS__)
+        if (ret == 1)
+            aros_dbg_file("[DO1] handshake OK\n");
+        else if (ret == 0)
+            aros_dbg_file("[DO0] handshake ret 0\n");
+        else
+            aros_dbg_file("[DON] handshake ret <0\n");
         if (ret <= 0 && SSL_is_server(ssl) == 0) {
             int serr = SSL_get_error(ssl, (int)ret);
             int spin;
@@ -486,6 +500,9 @@ static long ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
         default:
             break;
         }
+#if defined(__AROS__)
+        aros_dbg_file("[END] ssl_ctrl DO_STATE_MACHINE done\n");
+#endif
         break;
     case BIO_CTRL_DUP:
         dbio = (BIO *)ptr;
