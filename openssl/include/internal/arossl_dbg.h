@@ -49,7 +49,7 @@ static inline void arossl_dbg_val(const char *tag, long v)
     arossl_dbg_raw(b, pos);
 }
 
-#  else  /* !AMISSL_HOSTED_AROS — native AROS, no syscall */
+#  else  /* !AMISSL_HOSTED_AROS — native AROS */
 
 static inline void arossl_dbg_raw(const char *s, int n) { (void)s; (void)n; }
 static inline void arossl_dbg_msg(const char *s)         { (void)s; }

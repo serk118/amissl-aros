@@ -20,6 +20,28 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <string.h>
+# include <dos/dos.h>
+# include <proto/dos.h>
+# include <sys/time.h>
+
+/*
+ * Real-AROS file-based debug. Writes to T:amissl_debug.log.
+ * Uses MODE_NEWFILE (truncates) so only the LAST message survives.
+ * For a full trace, patch the mode to MODE_OLDFILE + Seek().
+ */
+static void aros_dbg_file(const char *s)
+{
+    BPTR fh;
+    if (!s || !*s) return;
+    fh = Open("T:amissl_debug.log", MODE_OLDFILE);
+    if (!fh)
+        fh = Open("T:amissl_debug.log", MODE_NEWFILE);
+    if (fh) {
+        Seek(fh, 0, OFFSET_END);
+        Write(fh, (APTR)s, (LONG)strlen(s));
+        Close(fh);
+    }
+}
 #endif
 
 #ifndef OPENSSL_NO_SOCK
@@ -123,19 +145,27 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
     BIO_info_cb *cb = NULL;
 
     arossl_dbg_val("[CON-ST] entered state", (long)c->state);
+    aros_dbg_file("[CN0] conn_state entry\n");
 
 #if defined(__AROS__)
     /*
-     * On AROS, bypass the connect-BIO state machine entirely.  The
-     * BEFORE->GET_ADDR->CREATE_SOCKET->CONNECT flow uses non-blocking
-     * sockets and errno-dependent retry logic that loops on real AROS
-     * ("slow internet" symptom).  Do a simple blocking DNS+socket+
-     * connect instead — same path httpget_default uses, proven working.
+     * AROS bypass for connect-BIO state machine.  Uses non-blocking
+     * connect to prevent GUI freeze on real AROS (blocking connect
+     * takes 30-120s).  DNS via gethostbyname (BIO_lookup unavailable).
+     *
+     * States handled within bypass:
+     *   BIO_CONN_S_BEFORE / GET_ADDR  → create socket, non-blocking connect
+     *   BIO_CONN_S_BLOCKED_CONNECT    → poll for connect completion
+     *
+     * The retry loop in bio_ssl.c's DO_STATE_MACHINE catches
+     * SSL_ERROR_WANT_CONNECT and calls SSL_do_handshake again,
+     * which re-enters conn_state in BLOCKED_CONNECT state.
      */
     if (c->state == BIO_CONN_S_BEFORE || c->state == BIO_CONN_S_GET_ADDR) {
         struct hostent *he;
         struct sockaddr_in addr;
         int sock;
+        int connect_ret, sock_opts;
 
         if (c->param_hostname == NULL) {
             ERR_raise(ERR_LIB_BIO, BIO_R_NO_HOSTNAME_OR_SERVICE_SPECIFIED);
@@ -157,7 +187,9 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
             ? (unsigned short)atoi(c->param_service) : 443);
         memcpy(&addr.sin_addr, he->h_addr_list[0], (size_t)he->h_length);
 
-        sock = BIO_socket(AF_INET, c->connect_sock_type, 0, 0);
+        /* Force non-blocking socket to prevent GUI freeze */
+        sock_opts = c->connect_mode | BIO_SOCK_NONBLOCK;
+        sock = BIO_socket(AF_INET, c->connect_sock_type, 0, sock_opts);
         if (sock == (int)INVALID_SOCKET) {
             ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
                 "calling socket()");
@@ -167,18 +199,69 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
             goto exit_loop;
         }
 
-        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
-                "calling connect(%s)", c->param_hostname);
-            BIO_closesocket(sock);
-            c->state = BIO_CONN_S_CONNECT_ERROR;
-            ret = 0;
+        b->num = sock;
+
+        ERR_set_mark();
+        connect_ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
+        if (connect_ret < 0) {
+            /*
+             * Non-blocking connect returned -1. On real AROS, errno may
+             * not be set (SocketBaseTagList/SBTC_ERRNOLONGPTR may not be
+             * implemented), so BIO_sock_should_retry() cannot detect
+             * EINPROGRESS. Instead, always transition to BLOCKED_CONNECT
+             * and let BIO_sock_error() (getsockopt SO_ERROR) determine
+             * actual completion or real error on the next call.
+             */
+            aros_dbg_file("[CN1] nonblock connect -> BLOCKED\n");
+            BIO_set_retry_special(b);
+            c->state = BIO_CONN_S_BLOCKED_CONNECT;
+            b->retry_reason = BIO_RR_CONNECT;
+            ERR_pop_to_mark();
+            ret = -1;
             goto exit_loop;
         }
-
-        b->num = sock;
+        ERR_clear_last_mark();
+        aros_dbg_file("[CN2] connect immediate OK\n");
         c->state = BIO_CONN_S_OK;
         ret = 1;
+        goto exit_loop;
+    }
+
+    if (c->state == BIO_CONN_S_BLOCKED_CONNECT) {
+        struct timeval tv;
+        fd_set wfds;
+        int sel;
+        /*
+         * Use select() to wait for the non-blocking connect to complete.
+         * BIO_sock_error() (getsockopt SO_ERROR) returns 0 both while
+         * the connect is still IN PROGRESS and after it succeeds, so
+         * we cannot distinguish the two without select().
+         */
+        FD_ZERO(&wfds);
+        FD_SET((unsigned int)b->num, &wfds);
+        tv.tv_sec = 0;
+        tv.tv_usec = 20000; /* 20ms poll interval */
+        sel = select(b->num + 1, NULL, &wfds, NULL, &tv);
+        if (sel > 0 && FD_ISSET((unsigned int)b->num, &wfds)) {
+            int i = BIO_sock_error(b->num);
+            if (i != 0) {
+                aros_dbg_file("[CN3] BLOCKED error\n");
+                BIO_clear_retry_flags(b);
+                ERR_raise_data(ERR_LIB_SYS, i,
+                    "calling connect(%s)", c->param_hostname);
+                ERR_raise(ERR_LIB_BIO, BIO_R_NBIO_CONNECT_ERROR);
+                ret = 0;
+                goto exit_loop;
+            }
+            aros_dbg_file("[CN4] connect complete OK\n");
+            c->state = BIO_CONN_S_OK;
+            ret = 1;
+            goto exit_loop;
+        }
+        /* Not yet connected - retry */
+        BIO_set_retry_special(b);
+        b->retry_reason = BIO_RR_CONNECT;
+        ret = -1;
         goto exit_loop;
     }
 #endif
