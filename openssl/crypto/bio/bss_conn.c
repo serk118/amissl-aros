@@ -222,6 +222,7 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
         }
         ERR_clear_last_mark();
         aros_dbg_file("[CN2] connect immediate OK\n");
+        BIO_socket_nbio(b->num, 0);
         c->state = BIO_CONN_S_OK;
         ret = 1;
         goto exit_loop;
@@ -254,6 +255,7 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
                 goto exit_loop;
             }
             aros_dbg_file("[CN4] connect complete OK\n");
+            BIO_socket_nbio(b->num, 0);
             c->state = BIO_CONN_S_OK;
             ret = 1;
             goto exit_loop;
