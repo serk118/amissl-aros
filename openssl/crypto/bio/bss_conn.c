@@ -14,34 +14,12 @@
 #include "internal/bio_tfo.h"
 #include "internal/ktls.h"
 #if defined(__AROS__)
-# include "internal/arossl_dbg.h"
 # include <netdb.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <string.h>
-# include <dos/dos.h>
-# include <proto/dos.h>
 # include <sys/time.h>
-
-/*
- * Real-AROS file-based debug. Writes to T:amissl_debug.log.
- * Uses MODE_NEWFILE (truncates) so only the LAST message survives.
- * For a full trace, patch the mode to MODE_OLDFILE + Seek().
- */
-static void aros_dbg_file(const char *s)
-{
-    BPTR fh;
-    if (!s || !*s) return;
-    fh = Open("T:amissl_debug.log", MODE_OLDFILE);
-    if (!fh)
-        fh = Open("T:amissl_debug.log", MODE_NEWFILE);
-    if (fh) {
-        Seek(fh, 0, OFFSET_END);
-        Write(fh, (APTR)s, (LONG)strlen(s));
-        Close(fh);
-    }
-}
 #endif
 
 #ifndef OPENSSL_NO_SOCK
@@ -138,14 +116,10 @@ err:
     return 0;
 }
 
-#include "internal/arossl_dbg.h"
 static int conn_state(BIO *b, BIO_CONNECT *c)
 {
     int ret = -1, i, opts;
     BIO_info_cb *cb = NULL;
-
-    arossl_dbg_val("[CON-ST] entered state", (long)c->state);
-    aros_dbg_file("[CN0] conn_state entry\n");
 
 #if defined(__AROS__)
     /*
@@ -212,7 +186,6 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
              * and let BIO_sock_error() (getsockopt SO_ERROR) determine
              * actual completion or real error on the next call.
              */
-            aros_dbg_file("[CN1] nonblock connect -> BLOCKED\n");
             BIO_set_retry_special(b);
             c->state = BIO_CONN_S_BLOCKED_CONNECT;
             b->retry_reason = BIO_RR_CONNECT;
@@ -221,7 +194,6 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
             goto exit_loop;
         }
         ERR_clear_last_mark();
-        aros_dbg_file("[CN2] connect immediate OK\n");
         BIO_socket_nbio(b->num, 0);
         c->state = BIO_CONN_S_OK;
         ret = 1;
@@ -246,7 +218,6 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
         if (sel > 0 && FD_ISSET((unsigned int)b->num, &wfds)) {
             int i = BIO_sock_error(b->num);
             if (i != 0) {
-                aros_dbg_file("[CN3] BLOCKED error\n");
                 BIO_clear_retry_flags(b);
                 ERR_raise_data(ERR_LIB_SYS, i,
                     "calling connect(%s)", c->param_hostname);
@@ -254,7 +225,6 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
                 ret = 0;
                 goto exit_loop;
             }
-            aros_dbg_file("[CN4] connect complete OK\n");
             BIO_socket_nbio(b->num, 0);
             c->state = BIO_CONN_S_OK;
             ret = 1;
@@ -479,15 +449,9 @@ static void conn_close_socket(BIO *bio)
 
     c = (BIO_CONNECT *)bio->ptr;
     if (bio->num != (int)INVALID_SOCKET) {
-#if defined(AMISSL_HOSTED_AROS)
-        arossl_dbg_msg("[CCS] conn_close_socket\n");
-#endif
         /* Only do a shutdown if things were established */
         if (c->state == BIO_CONN_S_OK)
             shutdown(bio->num, 2);
-#if defined(AMISSL_HOSTED_AROS)
-        arossl_dbg_msg("[CCS-close]\n");
-#endif
         BIO_closesocket(bio->num);
         bio->num = (int)INVALID_SOCKET;
     }
