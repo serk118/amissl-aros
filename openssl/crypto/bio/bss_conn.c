@@ -146,6 +146,41 @@ static int conn_state(BIO *b, BIO_CONNECT *c)
             goto exit_loop;
         }
 
+#if defined(__AROS__)
+        /*
+         * <netinclude/inline/bsdsocket_protos.h> expands gethostbyname()/
+         * socket()/connect()/select() in this block into dispatches through
+         * the library-GLOBAL SocketBase.  That global is only written during
+         * InitAmiSSLA when a socket-base tag is supplied, so it can be NULL
+         * here; the inline then dereferences NULL and bus-faults.  Mirror
+         * libcmt's GETSOCKET() fallback and, if a base becomes available via
+         * the global fallback, write it back into the global so the compiled
+         * inline dispatches through a valid base.
+         */
+        {
+            extern struct Library *SocketBase;
+            extern struct Library *__amissl_global_SocketBase;
+            struct Library *sb;
+
+            b->retry_reason = BIO_RR_CONNECT;
+            sb = __amissl_global_SocketBase;
+            if (sb != NULL) {
+                SocketBase = sb;
+            } else if (SocketBase != NULL) {
+                __amissl_global_SocketBase = SocketBase;
+                sb = SocketBase;
+            }
+            if (sb == NULL) {
+                ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),
+                    "no socket base available for gethostbyname(%s)",
+                    c->param_hostname);
+                c->state = BIO_CONN_S_CONNECT_ERROR;
+                ret = 0;
+                goto exit_loop;
+            }
+        }
+#endif
+
         he = gethostbyname(c->param_hostname);
         if (he == NULL) {
             ERR_raise_data(ERR_LIB_SYS, get_last_socket_error(),

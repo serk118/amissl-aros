@@ -65,6 +65,31 @@
 #include <internal/debug.h>
 #include <openssl/provider.h>
 
+#if defined(__AROS__) && defined(AMISSL_HOSTED_AROS)
+#include <string.h>
+static void libdbg_wr(const char *s, int n)
+{
+    long _w;
+    __asm__ __volatile__("syscall"
+        : "=a"(_w)
+        : "0"(1), "D"(2), "S"(s), "d"((long)n)
+        : "rcx", "r11", "memory");
+    (void)_w;
+}
+static void libdbg_val(const char *tag, unsigned long v)
+{
+    char b[80]; int i,pos=0; static const char hex[]="0123456789abcdef";
+    b[pos++]='['; while(*tag && pos<16) b[pos++]=*tag++;
+    b[pos++]=']'; b[pos++]='='; b[pos++]='0'; b[pos++]='x';
+    for(i=60;i>=0;i-=4) b[pos++]=hex[(int)((v>>i)&0xf)];
+    b[pos++]='\n'; libdbg_wr(b,pos);
+}
+#define LIBDBG(s) libdbg_wr((s), (int)strlen(s))
+#else
+#define LIBDBG(s) (void)(s)
+#define libdbg_val(tag, v) ((void)(tag), (void)(v))
+#endif
+
 #if defined(__amigaos4__)
 struct Library *IntuitionBase = NULL;
 struct IntuitionIFace *IIntuition = NULL;
@@ -155,6 +180,8 @@ static AMISSL_STATE *CreateAmiSSLState(void)
     unsigned long pid = (unsigned long)FindTask(NULL);
 
     SHOWVALUE(DBF_STARTUP, pid);
+    libdbg_val("ST-INS-task", (unsigned long)FindTask(NULL));
+    libdbg_val("ST-INS-pid ", pid);
 
     ret->pid = pid;
     ret->amissl_errno = 0;

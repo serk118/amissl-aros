@@ -54,6 +54,12 @@ struct TimeRequest *OpenTimer(AMISSL_STATE *state)
   struct MsgPort *port;
   struct TimeRequest *tr;
 
+  /* If the per-task state was never set up (e.g. an application entry point
+     that bypasses InitAmiSSLA), fail gracefully instead of dereferencing a
+     NULL state pointer (hardware bus fault on AROS). */
+  if(state == NULL)
+    return NULL;
+
   if(state->TimeRequest == NULL)
   {
     if((port = state->TimerPort) != NULL || (port = CreateMsgPort()) != NULL)

@@ -688,6 +688,10 @@ $(BUILD_D)/httpget_bio: $(TEST_D)/httpget_bio.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
 
+$(BUILD_D)/post_probe: $(TEST_D)/post_probe.c
+	@echo "  CC/LD $@"
+	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576
+
 $(BUILD_D)/provider_test: $(TEST_D)/provider_test.c
 	@echo "  CC/LD $@"
 	@$(CC) $(APPCFLAGS) -Wno-format -D__HAVE_IPTR_ATTR__ -o $@ $^ -Wl,-z,stack-size=1048576

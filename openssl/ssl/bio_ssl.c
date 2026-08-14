@@ -81,9 +81,6 @@ static int ssl_free(BIO *a)
         return 0;
     bs = BIO_get_data(a);
     if (BIO_get_shutdown(a)) {
-#if defined(AMISSL_HOSTED_AROS)
-        arossl_dbg_msg("[ssl_free] shutdown flag set\n");
-#endif
         if (bs->ssl != NULL && !SSL_in_init(bs->ssl))
             SSL_shutdown(bs->ssl);
         if (BIO_get_init(a))

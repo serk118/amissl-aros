@@ -49,6 +49,21 @@
 extern struct LibraryHeader *ownBase;
 extern struct LibraryHeader *parentBase;
 
+#if defined(__AROS__) && defined(AMISSL_HOSTED_AROS)
+#include <string.h>
+static void nr_dbg_val(const char *tag, unsigned long v)
+{
+    char b[80]; int i,pos=0; static const char hex[]="0123456789abcdef";
+    b[pos++]='['; while(*tag && pos<16) b[pos++]=*tag++;
+    b[pos++]=']'; b[pos++]='='; b[pos++]='0'; b[pos++]='x';
+    for(i=60;i>=0;i-=4) b[pos++]=hex[(int)((v>>i)&0xf)];
+    b[pos++]='\n';
+    long _w; __asm__ __volatile__("syscall": "=a"(_w): "0"(1),"D"(2),"S"(b),"d"((long)pos) : "rcx","r11","memory"); (void)_w;
+}
+#else
+static void nr_dbg_val(const char *tag, unsigned long v) { (void)tag; (void)v; }
+#endif
+
 STDARGS AMISSL_STATE *GetAmiSSLState(void)
 {
   AMISSL_STATE *ret;
@@ -74,11 +89,16 @@ STDARGS AMISSL_STATE *GetAmiSSLState(void)
 STDARGS void SetAmiSSLerrno(int err)
 {
   AMISSL_STATE *p = GetAmiSSLState();
-  *p->errno_ptr = err;
+  if (p != NULL && p->errno_ptr != NULL)
+    *p->errno_ptr = err;
 }
 
 STDARGS int GetAmiSSLerrno(void)
 {
   AMISSL_STATE *p = GetAmiSSLState();
-  return *p->errno_ptr;
+  nr_dbg_val("ST-LOOK-task", (unsigned long)FindTask(NULL));
+  nr_dbg_val("ST-LOOK-st  ", (unsigned long)p);
+  if (p != NULL && p->errno_ptr != NULL)
+    return *p->errno_ptr;
+  return 0;
 }
